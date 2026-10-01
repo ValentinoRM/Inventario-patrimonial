@@ -1,0 +1,676 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#762b32">
+  <title>Inventario patrimonial | Municipalidad Distrital de Huamancaca Chico</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --forest: #762b32;
+      --forest-deep: #551b22;
+      --blue: #1755a0;
+      --gold: #c69b2c;
+      --green: #2f7561;
+      --green-soft: #e4f0e9;
+      --paper: #f5f6f1;
+      --surface: #fff;
+      --ink: #18241f;
+      --muted: #758079;
+      --line: #e6eae4;
+      --amber: #9a7416;
+      --amber-soft: #faf3df;
+      --red: #9e3a3b;
+      --red-soft: #fae9e8;
+      --shadow: 0 12px 32px rgba(28, 48, 39, .12);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font-family: "DM Sans", sans-serif; font-size: 14px; }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .app { min-height: 100vh; }
+    .sidebar { background: var(--forest); color: #fff; display: flex; flex-direction: column; inset: 0 auto 0 0; padding: 25px 18px 20px; position: fixed; width: 250px; z-index: 5; }
+    .brand { align-items: center; display: flex; gap: 12px; padding: 1px 9px 29px; }
+    .brand-mark { align-items: center; background: #fff9e9; border-radius: 3px 12px 3px 12px; color: var(--forest); display: flex; flex: 0 0 42px; font: 800 15px Manrope, sans-serif; height: 42px; justify-content: center; letter-spacing: 0; }
+    .brand-copy { min-width: 0; }
+    .brand-copy strong { display: block; font: 700 12px/1.4 Manrope, sans-serif; }
+    .brand-copy span { color: #f0d9d5; display: block; font-size: 10px; margin-top: 3px; }
+    .nav-label { color: #e6c869; font-size: 10px; font-weight: 700; letter-spacing: 1.2px; padding: 0 11px; text-transform: uppercase; }
+    .nav-list { display: grid; gap: 5px; list-style: none; margin: 12px 0 0; padding: 0; }
+    .nav-link { align-items: center; border: 0; border-radius: 4px; color: #f4e8e4; display: flex; gap: 12px; min-height: 42px; padding: 0 12px; text-align: left; text-decoration: none; width: 100%; }
+    .nav-link.active { background: #8c3a40; color: #fff; }
+    .nav-link:hover { background: #64262d; }
+    .nav-link svg { flex: 0 0 17px; }
+    .side-spacer { flex: 1; }
+    .side-note { border-top: 1px solid rgba(255,255,255,.18); color: #ead7d1; font-size: 11px; line-height: 1.55; padding: 17px 9px 0; }
+    .side-note strong { color: #fff; display: block; font-size: 11px; margin-bottom: 4px; }
+    .main { margin-left: 250px; min-height: 100vh; padding: 0 40px 44px; }
+    .topbar { align-items: center; border-bottom: 1px solid var(--line); display: flex; height: 66px; justify-content: space-between; }
+    .crumb { color: var(--muted); font-size: 12px; }
+    .crumb strong { color: var(--ink); font-weight: 600; }
+    .user-chip { align-items: center; display: flex; gap: 10px; }
+    .user-avatar { align-items: center; background: #f5e7e4; border-radius: 50%; color: var(--forest); display: flex; font-size: 11px; font-weight: 700; height: 32px; justify-content: center; width: 32px; }
+    .user-text strong { display: block; font-size: 11px; }
+    .user-text span { color: var(--muted); display: block; font-size: 10px; margin-top: 2px; }
+    .page-head { align-items: flex-end; display: flex; justify-content: space-between; margin: 29px 0 22px; }
+    .eyebrow { color: var(--blue); font-size: 10px; font-weight: 700; letter-spacing: 1.25px; margin-bottom: 8px; text-transform: uppercase; }
+    h1 { font: 800 27px/1.15 Manrope, sans-serif; letter-spacing: 0; margin: 0; }
+    .page-head p { color: var(--muted); font-size: 12px; margin: 7px 0 0; }
+    .head-actions { display: flex; gap: 9px; }
+    .button { align-items: center; border: 1px solid transparent; border-radius: 4px; display: inline-flex; font-size: 12px; font-weight: 600; gap: 8px; justify-content: center; min-height: 38px; padding: 0 13px; transition: background .15s ease, border-color .15s ease, transform .15s ease; }
+    .button:active { transform: translateY(1px); }
+    .button svg { flex: 0 0 15px; }
+    .button-primary { background: var(--forest); color: #fff; }
+    .button-primary:hover { background: var(--forest-deep); }
+    .button-light { background: #fff; border-color: #dfe5de; color: var(--ink); }
+    .button-light:hover { background: #f4f7f3; border-color: #b9c9bc; }
+    .button-danger { background: var(--red-soft); color: var(--red); }
+    .metrics { display: grid; gap: 13px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 19px; }
+    .metric { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; min-height: 100px; padding: 15px 17px; }
+    .metric-top { align-items: center; color: var(--muted); display: flex; font-size: 11px; justify-content: space-between; }
+    .metric-icon { align-items: center; background: var(--green-soft); border-radius: 3px; color: var(--green); display: flex; height: 29px; justify-content: center; width: 29px; }
+    .metric-icon.amber { background: var(--amber-soft); color: var(--amber); }
+    .metric-icon.red { background: var(--red-soft); color: var(--red); }
+    .metric-value { font: 800 24px/1 Manrope, sans-serif; letter-spacing: 0; margin-top: 10px; }
+    .metric-detail { color: var(--muted); font-size: 10px; margin-top: 5px; }
+    .photo-strip { align-items: flex-end; background: #762b32; border-radius: 4px; color: #fff; display: flex; justify-content: space-between; margin-bottom: 20px; min-height: 100px; overflow: hidden; padding: 16px 20px; position: relative; }
+    .photo-strip::before { background: linear-gradient(90deg, rgba(65,18,24,.96) 0%, rgba(83,25,31,.79) 48%, rgba(83,25,31,.18) 100%), url("https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=1400&q=80") center 48%/cover; content: ""; inset: 0; position: absolute; }
+    .photo-copy, .photo-stamp { position: relative; z-index: 1; }
+    .photo-copy span { color: #f3d884; display: block; font-size: 10px; letter-spacing: .8px; text-transform: uppercase; }
+    .photo-copy strong { display: block; font: 700 15px Manrope, sans-serif; margin-top: 6px; }
+    .photo-stamp { border: 1px solid rgba(243,216,132,.78); color: #fff; font-size: 10px; padding: 7px 10px; }
+    .notice { align-items: flex-start; background: #edf3ea; border: 1px solid #dce8da; border-radius: 3px; color: #49694d; display: flex; font-size: 11px; gap: 9px; line-height: 1.45; margin-bottom: 19px; padding: 10px 12px; }
+    .notice svg { flex: 0 0 15px; margin-top: 1px; }
+    .section-head { align-items: center; display: flex; justify-content: space-between; margin: 0 0 11px; }
+    .section-head h2 { font: 700 15px Manrope, sans-serif; letter-spacing: 0; margin: 0; }
+    .section-head span { color: var(--muted); font-size: 11px; }
+    .table-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+    .toolbar { align-items: center; border-bottom: 1px solid var(--line); display: flex; gap: 9px; justify-content: space-between; padding: 12px 14px; }
+    .searchbox { align-items: center; border: 1px solid #e3e8e2; border-radius: 3px; display: flex; gap: 8px; max-width: 310px; padding: 0 10px; width: 100%; }
+    .searchbox svg { color: #88958d; flex: 0 0 15px; }
+    .searchbox input { background: transparent; border: 0; color: var(--ink); height: 34px; outline: 0; width: 100%; }
+    .searchbox input::placeholder { color: #9aa49d; }
+    .filters { display: flex; gap: 7px; }
+    .filters select { background: #fff; border: 1px solid #e3e8e2; border-radius: 3px; color: #4f5b54; font-size: 11px; height: 35px; max-width: 142px; padding: 0 26px 0 9px; }
+    .table-scroll { overflow-x: auto; }
+    table { border-collapse: collapse; min-width: 760px; text-align: left; width: 100%; }
+    th { background: #fafbf8; color: #879189; font-size: 9px; font-weight: 700; letter-spacing: .7px; padding: 11px 13px; text-transform: uppercase; white-space: nowrap; }
+    td { border-top: 1px solid #edf0eb; font-size: 11px; padding: 12px 13px; vertical-align: middle; }
+    tbody tr:hover { background: #fcfdfb; }
+    .asset-name { font-weight: 600; }
+    .asset-code { color: #919a94; font-size: 10px; margin-top: 4px; }
+    .category-pill { background: #f0f3ee; border-radius: 2px; color: #56645a; display: inline-block; font-size: 10px; padding: 4px 6px; white-space: nowrap; }
+    .status-pill { align-items: center; border-radius: 10px; display: inline-flex; font-size: 10px; gap: 5px; padding: 4px 8px; white-space: nowrap; }
+    .status-pill::before { background: currentColor; border-radius: 50%; content: ""; height: 5px; width: 5px; }
+    .status-bueno { background: var(--green-soft); color: #32725d; }
+    .status-regular { background: var(--amber-soft); color: #a6642d; }
+    .status-malo { background: var(--red-soft); color: var(--red); }
+    .row-actions { display: flex; gap: 4px; justify-content: flex-end; }
+    .icon-button { align-items: center; background: transparent; border: 1px solid transparent; border-radius: 3px; color: #7f8982; display: inline-flex; height: 29px; justify-content: center; width: 29px; }
+    .icon-button:hover { background: #eff4ef; border-color: #dfe7df; color: var(--forest); }
+    .icon-button.delete:hover { background: var(--red-soft); border-color: #f2d7d1; color: var(--red); }
+    .empty-state { color: var(--muted); padding: 40px 16px; text-align: center; }
+    .empty-state strong { color: var(--ink); display: block; font: 700 14px Manrope, sans-serif; margin-bottom: 6px; }
+    .table-foot { align-items: center; border-top: 1px solid var(--line); color: var(--muted); display: flex; font-size: 10px; justify-content: space-between; padding: 10px 14px; }
+    .modal-backdrop { align-items: center; background: rgba(12, 26, 21, .56); display: none; inset: 0; justify-content: center; padding: 18px; position: fixed; z-index: 10; }
+    .modal-backdrop.open { display: flex; }
+    .modal { background: var(--surface); border-radius: 5px; box-shadow: var(--shadow); max-height: min(92vh, 790px); max-width: 650px; overflow-y: auto; width: 100%; }
+    .modal-head { align-items: flex-start; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; padding: 20px 22px 16px; }
+    .modal-head h2 { font: 700 18px Manrope, sans-serif; margin: 0; }
+    .modal-head p { color: var(--muted); font-size: 11px; margin: 5px 0 0; }
+    .modal-close { background: transparent; border: 0; color: var(--muted); font-size: 22px; line-height: 1; padding: 0 2px; }
+    .form-grid { display: grid; gap: 14px 13px; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 18px 22px; }
+    .field { display: grid; gap: 6px; }
+    .field.full { grid-column: 1 / -1; }
+    .field label { color: #4c5951; font-size: 10px; font-weight: 700; }
+    .field input, .field select, .field textarea { background: #fff; border: 1px solid #dfe5de; border-radius: 3px; color: var(--ink); min-height: 37px; outline: none; padding: 8px 10px; width: 100%; }
+    .field textarea { min-height: 72px; resize: vertical; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--forest); box-shadow: 0 0 0 2px rgba(118,43,50,.12); }
+    .modal-actions { border-top: 1px solid var(--line); display: flex; gap: 8px; justify-content: flex-end; padding: 13px 22px; }
+    .toast { background: var(--forest-deep); border-radius: 3px; bottom: 22px; box-shadow: var(--shadow); color: #fff; font-size: 12px; opacity: 0; padding: 12px 16px; pointer-events: none; position: fixed; right: 22px; transform: translateY(8px); transition: .2s ease; z-index: 20; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .auth-screen { align-items: center; background: radial-gradient(ellipse at top right, #f1e2dc 0, transparent 48%), var(--paper); display: flex; justify-content: center; min-height: 100vh; padding: 20px; }
+    .auth-card { background: #fff; border: 1px solid var(--line); border-radius: 5px; box-shadow: var(--shadow); max-width: 390px; padding: 28px; width: 100%; }
+    .auth-card h1 { font-size: 22px; }
+    .auth-card > p { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 8px 0 20px; }
+    .auth-brand { align-items: center; color: var(--forest); display: flex; font: 700 12px Manrope, sans-serif; gap: 10px; margin-bottom: 24px; }
+    .auth-brand .brand-mark { background: var(--forest); color: #fff; }
+    .auth-error { color: var(--red); font-size: 11px; line-height: 1.5; margin-top: 10px; }
+    .auth-card .button { margin-top: 16px; width: 100%; }
+    .scan-field { align-items: center; display: flex; gap: 7px; }
+    .scan-field input { min-width: 0; }
+    .scan-field .button { flex: 0 0 auto; }
+    .scanner-backdrop { align-items: center; background: rgba(12,26,21,.72); display: none; inset: 0; justify-content: center; padding: 16px; position: fixed; z-index: 30; }
+    .scanner-backdrop.open { display: flex; }
+    .scanner-panel { background: #fff; border-radius: 5px; max-width: 480px; padding: 17px; width: 100%; }
+    .scanner-head { align-items: center; display: flex; justify-content: space-between; margin-bottom: 12px; }
+    .scanner-head strong { font: 700 15px Manrope, sans-serif; }
+    #barcodeReader { min-height: 250px; overflow: hidden; }
+    #barcodeReader video { border-radius: 3px; }
+    .scanner-hint { color: var(--muted); font-size: 11px; line-height: 1.5; margin: 10px 0 0; }
+    .setup-notice { background: var(--amber-soft); border: 1px solid #efddc9; border-radius: 3px; color: #77502f; font-size: 11px; line-height: 1.5; margin-bottom: 18px; padding: 11px 13px; }
+    .asset-barcode { color: #69766e; font-size: 10px; margin-top: 3px; }
+    [hidden] { display: none !important; }
+    @media (max-width: 1000px) {
+      .sidebar { width: 218px; }
+      .main { margin-left: 218px; padding-left: 25px; padding-right: 25px; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 720px) {
+      .sidebar { height: 62px; inset: 0 0 auto; padding: 8px 15px; width: 100%; }
+      .brand { padding: 0; }
+      .brand-mark { flex-basis: 38px; height: 38px; }
+      .nav-label, .nav-list, .side-spacer, .side-note { display: none; }
+      .main { margin: 62px 0 0; padding: 0 16px 30px; }
+      .topbar { height: 50px; }
+      .user-text { display: none; }
+      .page-head { align-items: flex-start; flex-direction: column; gap: 15px; margin: 22px 0 18px; }
+      h1 { font-size: 23px; }
+      .head-actions { flex-wrap: wrap; width: 100%; }
+      .head-actions .button { flex: 1; }
+      .metrics { gap: 8px; }
+      .metric { min-height: 91px; padding: 11px; }
+      .metric-value { font-size: 21px; }
+      .photo-strip { min-height: 93px; padding: 13px; }
+      .photo-stamp { font-size: 9px; }
+      .toolbar { align-items: stretch; flex-direction: column; }
+      .searchbox { max-width: none; }
+      .filters select { flex: 1; max-width: none; }
+      .section-head { align-items: flex-start; flex-direction: column; gap: 5px; }
+    }
+    @media (max-width: 430px) {
+      .filters { display: grid; grid-template-columns: 1fr 1fr; }
+      .photo-stamp { display: none; }
+      .form-grid { grid-template-columns: 1fr; padding: 15px; }
+      .field.full { grid-column: auto; }
+      .modal-head, .modal-actions { padding-left: 15px; padding-right: 15px; }
+      .modal-actions .button { flex: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <section class="auth-screen" id="authScreen" hidden>
+    <form class="auth-card" id="loginForm">
+      <div class="auth-brand"><div class="brand-mark" aria-hidden="true">HC</div> Inventario patrimonial municipal</div>
+      <div class="eyebrow">Acceso al sistema</div>
+      <h1>Iniciar sesión</h1>
+      <p>Ingresa con la cuenta municipal que te asignó la persona administradora.</p>
+      <div class="field"><label for="loginEmail">Correo electrónico</label><input id="loginEmail" type="email" autocomplete="username" required></div>
+      <div class="field" style="margin-top:13px"><label for="loginPassword">Contraseña</label><input id="loginPassword" type="password" autocomplete="current-password" required></div>
+      <button class="button button-primary" type="submit" id="loginBtn">Ingresar</button>
+      <div class="auth-error" id="authError" role="alert" hidden></div>
+    </form>
+  </section>
+  <div class="app">
+    <aside class="sidebar" aria-label="Navegación principal">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">HC</div>
+        <div class="brand-copy"><strong>Municipalidad Distrital</strong><span>Huamancaca Chico · Junín</span></div>
+      </div>
+      <div class="nav-label">Gestión municipal</div>
+      <ul class="nav-list">
+        <li><a class="nav-link active" href="#inventario" aria-current="page"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h4"/></svg> Inventario patrimonial</a></li>
+      </ul>
+      <div class="side-spacer"></div>
+      <div class="side-note"><strong>Control de bienes</strong>Registro interno para organizar y consultar los bienes municipales.</div>
+    </aside>
+
+    <main class="main" id="inventario">
+      <div class="topbar">
+        <div class="crumb">Patrimonio <span aria-hidden="true">/</span> <strong>Inventario</strong></div>
+        <div class="user-chip"><div class="user-avatar" aria-hidden="true">HC</div><div class="user-text"><strong id="activeUser">Administración</strong><span id="connectionLabel">Modo demostración</span></div><button class="button button-light" id="signOutBtn" type="button" hidden>Cerrar sesión</button></div>
+      </div>
+
+      <header class="page-head">
+        <div><div class="eyebrow">Gestión patrimonial</div><h1>Inventario de bienes</h1><p>Organiza, consulta y mantén actualizado el patrimonio municipal.</p></div>
+        <div class="head-actions">
+          <button class="button button-light" id="scanLookupBtn" type="button"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7V4h3m10 0h3v3M4 17v3h3m10 0h3v-3M5 12h14M8 9v6m3-6v6m3-6v6m3-6v6"/></svg> Escanear</button>
+          <button class="button button-light" id="exportBtn" type="button"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m-5-5 5 5 5-5M5 17v3h14v-3"/></svg> Exportar CSV</button>
+          <button class="button button-primary" id="addBtn" type="button"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Registrar bien</button>
+        </div>
+      </header>
+
+      <section class="metrics" aria-label="Resumen del inventario">
+        <article class="metric"><div class="metric-top"><span>Bienes registrados</span><span class="metric-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h4"/></svg></span></div><div class="metric-value" id="metricItems">0</div><div class="metric-detail">Unidades en inventario</div></article>
+        <article class="metric"><div class="metric-top"><span>En buen estado</span><span class="metric-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 12 4 4L19 6"/></svg></span></div><div class="metric-value" id="metricGood">0</div><div class="metric-detail">Bienes operativos</div></article>
+        <article class="metric"><div class="metric-top"><span>Requieren atención</span><span class="metric-icon amber"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 2.8 20h18.4L12 3Z"/><path d="M12 9v5m0 3h.01"/></svg></span></div><div class="metric-value" id="metricAttention">0</div><div class="metric-detail">Regulares o en mal estado</div></article>
+        <article class="metric"><div class="metric-top"><span>Ambientes ocupados</span><span class="metric-icon red"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 21V8l9-5 9 5v13M8 21v-7h8v7M7 9h.01M12 9h.01M17 9h.01"/></svg></span></div><div class="metric-value" id="metricLocations">0</div><div class="metric-detail">Ubicaciones registradas</div></article>
+      </section>
+
+      <section class="photo-strip" aria-label="Identificación del inventario municipal">
+        <div class="photo-copy"><span>Municipalidad Distrital de Huamancaca Chico</span><strong>Patrimonio bajo control, gestión transparente.</strong></div>
+        <div class="photo-stamp">INVENTARIO MUNICIPAL</div>
+      </section>
+
+      <div class="notice" id="demoNotice" role="status"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg><span>Vista de demostración: estos registros son datos de ejemplo. Reemplázalos por los bienes reales de la municipalidad. La información se guarda en este navegador.</span></div>
+      <div class="setup-notice" id="setupNotice" hidden>La base compartida aún no está conectada. Configura el proyecto de Supabase en <strong>supabase-config.js</strong> y aplica <strong>supabase-schema.sql</strong>. Mientras tanto, este navegador usa datos locales de demostración.</div>
+
+      <section aria-labelledby="tableTitle">
+        <div class="section-head"><h2 id="tableTitle">Registro de bienes</h2><span id="resultCount">0 registros</span></div>
+        <div class="table-panel">
+          <div class="toolbar">
+            <label class="searchbox"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m16 16 4 4"/></svg><input id="searchInput" type="search" placeholder="Buscar por nombre, código o ambiente..." aria-label="Buscar bienes"></label>
+            <div class="filters">
+              <select id="categoryFilter" aria-label="Filtrar por categoría"><option value="">Todas las categorías</option></select>
+              <select id="conditionFilter" aria-label="Filtrar por estado"><option value="">Todos los estados</option><option>Bueno</option><option>Regular</option><option>Malo</option></select>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>Bien / Código</th><th>Barcode</th><th>Categoría</th><th>Cantidad</th><th>Ambiente</th><th>Responsable</th><th>Estado</th><th aria-label="Acciones"></th></tr></thead>
+              <tbody id="assetRows"></tbody>
+            </table>
+            <div class="empty-state" id="emptyState" hidden><strong>No hay bienes para mostrar</strong>Prueba otra búsqueda o registra un nuevo bien.</div>
+          </div>
+          <div class="table-foot"><span id="tableFootCount">0 bienes</span><span id="databaseStatus">Datos locales de demostración</span></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="modalBackdrop" role="presentation">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head"><div><h2 id="modalTitle">Registrar bien</h2><p>Completa la información del bien patrimonial.</p></div><button class="modal-close" id="closeModal" type="button" aria-label="Cerrar">&times;</button></div>
+      <form id="assetForm">
+        <div class="form-grid">
+          <div class="field"><label for="name">Nombre del bien *</label><input id="name" name="name" required maxlength="90" placeholder="Ej. Escritorio de madera"></div>
+          <div class="field"><label for="category">Categoría *</label><select id="category" name="category" required><option value="">Seleccionar categoría</option><option>Muebles</option><option>Equipos informáticos</option><option>Electrodomésticos</option><option>Vehículos</option><option>Herramientas</option><option>Otros</option></select></div>
+          <div class="field full"><label for="barcode">Código de barras</label><div class="scan-field"><input id="barcode" name="barcode" maxlength="120" placeholder="Escanea o escribe el código del bien"><button class="button button-light" id="scanFormBtn" type="button" aria-label="Escanear código de barras"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7V4h3m10 0h3v3M4 17v3h3m10 0h3v-3M5 12h14M8 9v6m3-6v6m3-6v6m3-6v6"/></svg> Escanear</button></div></div>
+          <div class="field"><label for="quantity">Cantidad *</label><input id="quantity" name="quantity" type="number" min="1" max="99999" value="1" required></div>
+          <div class="field"><label for="condition">Estado de conservación *</label><select id="condition" name="condition" required><option>Bueno</option><option>Regular</option><option>Malo</option></select></div>
+          <div class="field"><label for="location">Ambiente / ubicación *</label><input id="location" name="location" required maxlength="70" placeholder="Ej. Secretaría general"></div>
+          <div class="field"><label for="custodian">Responsable</label><input id="custodian" name="custodian" maxlength="70" placeholder="Nombre del responsable"></div>
+          <div class="field"><label for="acquired">Fecha de adquisición</label><input id="acquired" name="acquired" type="date"></div>
+          <div class="field"><label for="value">Valor referencial (S/)</label><input id="value" name="value" type="number" min="0" step="0.01" placeholder="0.00"></div>
+          <div class="field full"><label for="notes">Observaciones</label><textarea id="notes" name="notes" maxlength="300" placeholder="Detalles adicionales del bien"></textarea></div>
+        </div>
+        <div class="modal-actions"><button class="button button-light" id="cancelModal" type="button">Cancelar</button><button class="button button-primary" type="submit" id="saveBtn">Guardar bien</button></div>
+      </form>
+    </section>
+  </div>
+  <div class="scanner-backdrop" id="scannerBackdrop" role="presentation">
+    <section class="scanner-panel" role="dialog" aria-modal="true" aria-labelledby="scannerTitle">
+      <div class="scanner-head"><strong id="scannerTitle">Escanear código de barras</strong><button class="modal-close" id="closeScanner" type="button" aria-label="Cerrar escáner">&times;</button></div>
+      <div id="barcodeReader"></div>
+      <p class="scanner-hint" id="scannerHint">Centra el código de barras frente a la cámara. Si el navegador lo solicita, permite el acceso a la cámara.</p>
+    </section>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="./supabase-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script>
+    const STORAGE_KEY = "huamancaca-patrimonio-v1";
+    const sampleAssets = [
+      { id: "HC-0001", asset_code: "HC-0001", barcode: "", name: "Computadora de escritorio", category: "Equipos informáticos", quantity: 4, location: "Administración", custodian: "Oficina de administración", condition: "Bueno", acquired: "2024-02-12", value: 3200, notes: "Registro de demostración" },
+      { id: "HC-0002", asset_code: "HC-0002", barcode: "", name: "Sillas de oficina", category: "Muebles", quantity: 12, location: "Salón consistorial", custodian: "Secretaría general", condition: "Regular", acquired: "2022-06-18", value: 1800, notes: "Registro de demostración" },
+      { id: "HC-0003", asset_code: "HC-0003", barcode: "", name: "Mesas de reunión", category: "Muebles", quantity: 3, location: "Salón consistorial", custodian: "Secretaría general", condition: "Bueno", acquired: "2023-03-07", value: 2100, notes: "Registro de demostración" },
+      { id: "HC-0004", asset_code: "HC-0004", barcode: "", name: "Impresora multifuncional", category: "Equipos informáticos", quantity: 2, location: "Tesorería", custodian: "Área de tesorería", condition: "Bueno", acquired: "2024-08-21", value: 2400, notes: "Registro de demostración" },
+      { id: "HC-0005", asset_code: "HC-0005", barcode: "", name: "Archivadores metálicos", category: "Muebles", quantity: 5, location: "Archivo central", custodian: "Responsable de archivo", condition: "Regular", acquired: "2021-11-03", value: 1750, notes: "Registro de demostración" },
+      { id: "HC-0006", asset_code: "HC-0006", barcode: "", name: "Proyector multimedia", category: "Equipos informáticos", quantity: 1, location: "Desarrollo social", custodian: "Área de desarrollo social", condition: "Malo", acquired: "2020-09-15", value: 1600, notes: "Registro de demostración" }
+    ];
+
+    const settings = window.PATRIMONIAL_CONFIG ?? {};
+    const supabaseReady = Boolean(settings.supabaseUrl && settings.publishableKey && window.supabase?.createClient);
+    const supabaseClient = supabaseReady ? window.supabase.createClient(settings.supabaseUrl, settings.publishableKey) : null;
+    let assets = [];
+    let editingId = null;
+    let toastTimer;
+    let realtimeChannel = null;
+    let barcodeScanner = null;
+    let scanTarget = "lookup";
+    let scanHandled = false;
+
+    const rows = document.getElementById("assetRows");
+    const form = document.getElementById("assetForm");
+    const backdrop = document.getElementById("modalBackdrop");
+    const scannerBackdrop = document.getElementById("scannerBackdrop");
+    const categoryFilter = document.getElementById("categoryFilter");
+    const conditionFilter = document.getElementById("conditionFilter");
+    const searchInput = document.getElementById("searchInput");
+    document.getElementById("setupNotice").hidden = supabaseReady;
+    document.getElementById("demoNotice").hidden = supabaseReady;
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+    }
+
+    function saveLocalAssets() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(assets));
+        return true;
+      } catch {
+        showToast("No se pudieron guardar los datos en este navegador.");
+        return false;
+      }
+    }
+
+    function mapDatabaseAsset(row) {
+      return {
+        id: row.id,
+        asset_code: row.asset_code,
+        barcode: row.barcode ?? "",
+        name: row.name,
+        category: row.category,
+        quantity: row.quantity,
+        location: row.location,
+        custodian: row.custodian ?? "",
+        condition: row.condition,
+        acquired: row.acquired_on ?? "",
+        value: Number(row.value) || 0,
+        notes: row.notes ?? ""
+      };
+    }
+
+    async function loadRemoteAssets(showErrors = true) {
+      const { data, error } = await supabaseClient.from("assets").select("*").order("created_at", { ascending: false });
+      if (error) {
+        document.getElementById("databaseStatus").textContent = "Error al conectar con la base de datos";
+        if (showErrors) showToast(`No se pudo cargar el inventario: ${error.message}`);
+        return;
+      }
+      assets = data.map(mapDatabaseAsset);
+      document.getElementById("databaseStatus").textContent = "Base compartida · cambios sincronizados";
+      render();
+    }
+
+    async function enterWithUser(user) {
+      document.getElementById("authScreen").hidden = true;
+      document.querySelector(".app").hidden = false;
+      document.getElementById("activeUser").textContent = user.email || "Usuario municipal";
+      document.getElementById("connectionLabel").textContent = "Sesión municipal";
+      document.getElementById("signOutBtn").hidden = false;
+      await loadRemoteAssets();
+      if (realtimeChannel) await supabaseClient.removeChannel(realtimeChannel);
+      realtimeChannel = supabaseClient
+        .channel("municipal-assets-changes")
+        .on("postgres_changes", { event: "*", schema: "public", table: "assets" }, () => loadRemoteAssets(false))
+        .subscribe();
+    }
+
+    function showLogin(errorMessage = "") {
+      document.querySelector(".app").hidden = true;
+      document.getElementById("authScreen").hidden = false;
+      document.getElementById("signOutBtn").hidden = true;
+      const errorBox = document.getElementById("authError");
+      errorBox.textContent = errorMessage;
+      errorBox.hidden = !errorMessage;
+    }
+
+    function render() {
+      const query = searchInput.value.trim().toLocaleLowerCase("es");
+      const filtered = assets.filter(asset => {
+        const matchesQuery = [asset.name, asset.asset_code, asset.barcode, asset.location, asset.category, asset.custodian].some(value => String(value ?? "").toLocaleLowerCase("es").includes(query));
+        return matchesQuery && (!categoryFilter.value || asset.category === categoryFilter.value) && (!conditionFilter.value || asset.condition === conditionFilter.value);
+      });
+      rows.innerHTML = filtered.map(asset => `<tr>
+        <td><div class="asset-name">${escapeHtml(asset.name)}</div><div class="asset-code">${escapeHtml(asset.asset_code || asset.id)}</div></td>
+        <td>${asset.barcode ? `<span class="asset-barcode">${escapeHtml(asset.barcode)}</span>` : "<span class=\"asset-barcode\">Sin código</span>"}</td>
+        <td><span class="category-pill">${escapeHtml(asset.category)}</span></td>
+        <td>${Number(asset.quantity) || 0}</td>
+        <td>${escapeHtml(asset.location)}</td>
+        <td>${escapeHtml(asset.custodian || "Sin asignar")}</td>
+        <td><span class="status-pill status-${escapeHtml(asset.condition.toLocaleLowerCase("es"))}">${escapeHtml(asset.condition)}</span></td>
+        <td><div class="row-actions"><button class="icon-button" type="button" data-action="edit" data-id="${escapeHtml(asset.id)}" aria-label="Editar ${escapeHtml(asset.name)}" title="Editar"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m14 5 5 5M4 20l4.2-.8L19 8.4 15.6 5 4.8 15.8 4 20Z"/></svg></button><button class="icon-button delete" type="button" data-action="delete" data-id="${escapeHtml(asset.id)}" aria-label="Eliminar ${escapeHtml(asset.name)}" title="Eliminar"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3"/></svg></button></div></td>
+      </tr>`).join("");
+      document.getElementById("emptyState").hidden = filtered.length > 0;
+      document.querySelector(".table-scroll table").hidden = filtered.length === 0;
+      const totalUnits = assets.reduce((total, asset) => total + (Number(asset.quantity) || 0), 0);
+      const goodUnits = assets.filter(asset => asset.condition === "Bueno").reduce((total, asset) => total + (Number(asset.quantity) || 0), 0);
+      const attentionUnits = assets.filter(asset => asset.condition !== "Bueno").reduce((total, asset) => total + (Number(asset.quantity) || 0), 0);
+      const locations = new Set(assets.map(asset => asset.location.trim().toLocaleLowerCase("es")).filter(Boolean));
+      document.getElementById("metricItems").textContent = totalUnits.toLocaleString("es-PE");
+      document.getElementById("metricGood").textContent = goodUnits.toLocaleString("es-PE");
+      document.getElementById("metricAttention").textContent = attentionUnits.toLocaleString("es-PE");
+      document.getElementById("metricLocations").textContent = locations.size.toLocaleString("es-PE");
+      document.getElementById("resultCount").textContent = `${filtered.length} ${filtered.length === 1 ? "registro" : "registros"}`;
+      document.getElementById("tableFootCount").textContent = `${filtered.reduce((total, asset) => total + (Number(asset.quantity) || 0), 0)} bienes`;
+      document.getElementById("demoNotice").hidden = supabaseReady || Boolean(localStorage.getItem(STORAGE_KEY));
+      const categories = [...new Set(assets.map(asset => asset.category))].sort((a, b) => a.localeCompare(b, "es"));
+      const selected = categoryFilter.value;
+      categoryFilter.innerHTML = `<option value="">Todas las categorías</option>${categories.map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join("")}`;
+      categoryFilter.value = categories.includes(selected) ? selected : "";
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 2600);
+    }
+
+    function openModal(asset = null) {
+      editingId = asset?.id ?? null;
+      form.reset();
+      form.elements.quantity.value = 1;
+      document.getElementById("modalTitle").textContent = editingId ? "Editar bien" : "Registrar bien";
+      document.getElementById("saveBtn").textContent = editingId ? "Guardar cambios" : "Guardar bien";
+      if (asset) {
+        for (const key of ["name", "category", "quantity", "condition", "location", "custodian", "acquired", "value", "notes", "barcode"]) form.elements[key].value = asset[key] ?? "";
+      }
+      backdrop.classList.add("open");
+      document.getElementById("name").focus();
+    }
+
+    function closeModal() {
+      backdrop.classList.remove("open");
+      editingId = null;
+    }
+
+    document.getElementById("addBtn").addEventListener("click", () => openModal());
+    document.getElementById("closeModal").addEventListener("click", closeModal);
+    document.getElementById("cancelModal").addEventListener("click", closeModal);
+    backdrop.addEventListener("click", event => { if (event.target === backdrop) closeModal(); });
+    document.addEventListener("keydown", event => { if (event.key === "Escape" && backdrop.classList.contains("open")) closeModal(); });
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      const data = new FormData(form);
+      const values = Object.fromEntries(data.entries());
+      const current = editingId ? assets.find(asset => asset.id === editingId) : null;
+      const payload = {
+        name: values.name.trim(),
+        category: values.category,
+        barcode: values.barcode.trim() || null,
+        quantity: Number(values.quantity),
+        location: values.location.trim(),
+        custodian: values.custodian.trim(),
+        condition: values.condition,
+        acquired_on: values.acquired || null,
+        value: Number(values.value) || 0,
+        notes: values.notes.trim()
+      };
+      const saveButton = document.getElementById("saveBtn");
+      saveButton.disabled = true;
+      try {
+        if (supabaseReady) {
+          const request = current
+            ? supabaseClient.from("assets").update(payload).eq("id", editingId).select().single()
+            : supabaseClient.from("assets").insert(payload).select().single();
+          const { data: savedAsset, error } = await request;
+          if (error) throw error;
+          if (current) assets = assets.map(item => item.id === editingId ? mapDatabaseAsset(savedAsset) : item);
+          else assets.unshift(mapDatabaseAsset(savedAsset));
+        } else {
+          const lastNumber = Math.max(0, ...assets.map(item => Number((item.asset_code || item.id).split("-")[1]) || 0));
+          const nextCode = `HC-${String(lastNumber + 1).padStart(4, "0")}`;
+          const localAsset = { ...payload, acquired: payload.acquired_on || "", id: current?.id ?? nextCode, asset_code: current?.asset_code ?? nextCode, barcode: payload.barcode ?? "" };
+          delete localAsset.acquired_on;
+          if (current) assets = assets.map(item => item.id === editingId ? localAsset : item);
+          else assets.unshift(localAsset);
+          if (!saveLocalAssets()) return;
+        }
+        render();
+        closeModal();
+        showToast(current ? "Cambios guardados." : "Bien registrado correctamente.");
+      } catch (error) {
+        showToast(error.message?.includes("barcode") ? "Ese código de barras ya está registrado." : `No se pudo guardar: ${error.message}`);
+      } finally {
+        saveButton.disabled = false;
+      }
+    });
+    rows.addEventListener("click", async event => {
+      const button = event.target.closest("button[data-action]");
+      if (!button) return;
+      const asset = assets.find(item => item.id === button.dataset.id);
+      if (!asset) return;
+      if (button.dataset.action === "edit") openModal(asset);
+      if (button.dataset.action === "delete" && confirm(`¿Eliminar "${asset.name}" (${asset.id}) del inventario?`)) {
+        try {
+          if (supabaseReady) {
+            const { error } = await supabaseClient.from("assets").delete().eq("id", asset.id);
+            if (error) throw error;
+          }
+          assets = assets.filter(item => item.id !== asset.id);
+          if (!supabaseReady) saveLocalAssets();
+          render();
+          showToast("Bien eliminado del inventario.");
+        } catch (error) {
+          showToast(`No se pudo eliminar: ${error.message}`);
+        }
+      }
+    });
+    searchInput.addEventListener("input", render);
+    categoryFilter.addEventListener("change", render);
+    conditionFilter.addEventListener("change", render);
+    document.getElementById("exportBtn").addEventListener("click", () => {
+      if (!assets.length) { showToast("No hay bienes para exportar."); return; }
+      const columns = ["Código patrimonial", "Código de barras", "Nombre", "Categoría", "Cantidad", "Ambiente", "Responsable", "Estado", "Fecha de adquisición", "Valor referencial (S/)", "Observaciones"];
+      const keys = ["asset_code", "barcode", "name", "category", "quantity", "location", "custodian", "condition", "acquired", "value", "notes"];
+      const csvCell = value => `"${String(value ?? "").replace(/"/g, '""')}"`;
+      const csv = [columns, ...assets.map(asset => keys.map(key => asset[key]))].map(line => line.map(csvCell).join(",")).join("\r\n");
+      const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "inventario-patrimonial-huamancaca-chico.csv";
+      link.click();
+      URL.revokeObjectURL(link.href);
+      showToast("Inventario exportado a CSV.");
+    });
+
+    async function stopScanner() {
+      if (barcodeScanner) {
+        try {
+          if (barcodeScanner.isScanning) await barcodeScanner.stop();
+          await barcodeScanner.clear();
+        } catch { /* The camera can already be stopped by the browser. */ }
+        barcodeScanner = null;
+      }
+      scannerBackdrop.classList.remove("open");
+    }
+
+    function onScannedBarcode(code, target) {
+      if (target === "form") {
+        form.elements.barcode.value = code;
+        showToast(`Código leído: ${code}`);
+        return;
+      }
+      const existing = assets.find(asset => asset.barcode === code || asset.asset_code === code);
+      searchInput.value = code;
+      categoryFilter.value = "";
+      conditionFilter.value = "";
+      if (existing) {
+        render();
+        showToast(`Bien encontrado: ${existing.name}`);
+      } else {
+        searchInput.value = "";
+        render();
+        openModal();
+        form.elements.barcode.value = code;
+        showToast("Código nuevo. Completa los datos para registrarlo.");
+      }
+    }
+
+    async function startScanner(target) {
+      if (!window.Html5Qrcode) { showToast("No se pudo cargar el lector. Revisa tu conexión a internet."); return; }
+      scanTarget = target;
+      scanHandled = false;
+      scannerBackdrop.classList.add("open");
+      document.getElementById("scannerHint").textContent = "Centra el código frente a la cámara. En celulares, permite el acceso cuando el navegador lo solicite.";
+      const formats = window.Html5QrcodeSupportedFormats;
+      barcodeScanner = new window.Html5Qrcode("barcodeReader", {
+        formatsToSupport: [formats.CODE_128, formats.CODE_39, formats.EAN_13, formats.EAN_8, formats.UPC_A, formats.UPC_E, formats.ITF, formats.QR_CODE]
+      });
+      try {
+        await barcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 280, height: 140 } }, async decodedText => {
+          if (scanHandled) return;
+          scanHandled = true;
+          const code = decodedText.trim();
+          await stopScanner();
+          onScannedBarcode(code, scanTarget);
+        }, () => {});
+      } catch (error) {
+        document.getElementById("scannerHint").textContent = `No se pudo abrir la cámara: ${error.message}. Usa HTTPS y permite el acceso a la cámara.`;
+        await stopScanner();
+        scannerBackdrop.classList.add("open");
+      }
+    }
+
+    document.getElementById("scanLookupBtn").addEventListener("click", () => startScanner("lookup"));
+    document.getElementById("scanFormBtn").addEventListener("click", () => startScanner("form"));
+    document.getElementById("closeScanner").addEventListener("click", stopScanner);
+    scannerBackdrop.addEventListener("click", event => { if (event.target === scannerBackdrop) stopScanner(); });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && scannerBackdrop.classList.contains("open")) stopScanner();
+      if (event.key === "Escape" && backdrop.classList.contains("open")) closeModal();
+    });
+
+    document.getElementById("loginForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      const loginButton = document.getElementById("loginBtn");
+      loginButton.disabled = true;
+      document.getElementById("authError").hidden = true;
+      try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+          email: document.getElementById("loginEmail").value.trim(),
+          password: document.getElementById("loginPassword").value
+        });
+        if (error) showLogin(`No se pudo iniciar sesión: ${error.message}`);
+        else if (data.user) await enterWithUser(data.user);
+      } catch (error) {
+        showLogin(`No se pudo conectar con Supabase: ${error.message}`);
+      } finally {
+        loginButton.disabled = false;
+      }
+    });
+
+    document.getElementById("signOutBtn").addEventListener("click", async () => {
+      await supabaseClient.auth.signOut({ scope: "local" });
+      assets = [];
+      render();
+      showLogin();
+    });
+
+    if (supabaseReady) {
+      document.querySelector(".app").hidden = true;
+      showLogin();
+      supabaseClient.auth.onAuthStateChange((event, session) => {
+        if (event === "SIGNED_OUT") {
+          assets = [];
+          render();
+          showLogin();
+        }
+      });
+      supabaseClient.auth.getSession().then(({ data, error }) => {
+        if (error) showLogin(`No se pudo verificar la sesión: ${error.message}`);
+        else if (data.session) enterWithUser(data.session.user);
+      });
+    } else {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        assets = saved === null ? structuredClone(sampleAssets) : JSON.parse(saved);
+        if (!Array.isArray(assets)) assets = structuredClone(sampleAssets);
+      } catch {
+        assets = structuredClone(sampleAssets);
+      }
+      render();
+    }
+  </script>
+</body>
+</html>
