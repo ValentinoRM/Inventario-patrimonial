@@ -1,0 +1,9 @@
+index.html
+README.md
+assets/
+  css/styles.css
+  js/app.js
+config/
+  supabase-config.js
+database/
+  supabase-schema.sql
