@@ -1,0 +1,8 @@
+# Redirige todas las peticiones al directorio público.
+# Úsalo solo si configuras el proyecto entero como raíz web (por ejemplo htdocs/inventario-patrimonial).
+# Lo ideal es apuntar el DocumentRoot del servidor directamente a la carpeta public/.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_URI} !/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>

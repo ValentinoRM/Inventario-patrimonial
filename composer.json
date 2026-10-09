@@ -1,0 +1,10 @@
+{
+  "name": "huamancaca/inventario-patrimonial",
+  "description": "Inventario patrimonial municipal - Huamancaca Chico (PHP + MySQL)",
+  "type": "project",
+  "require": {
+    "php": ">=8.1",
+    "ext-pdo": "*",
+    "phpoffice/phpspreadsheet": "^2.0"
+  }
+}
