@@ -13,6 +13,7 @@ const supabaseReady = Boolean(settings.supabaseUrl && settings.publishableKey &&
 const supabaseClient = supabaseReady ? window.supabase.createClient(settings.supabaseUrl, settings.publishableKey) : null;
 let assets = [];
 let editingId = null;
+let userRole = "user";
 let toastTimer;
 let realtimeChannel = null;
 let barcodeScanner = null;
@@ -73,10 +74,11 @@ async function loadRemoteAssets(showErrors = true) {
 }
 
 async function enterWithUser(user) {
+  userRole = user.app_metadata?.role === "admin" ? "admin" : "user";
   document.getElementById("authScreen").hidden = true;
   document.querySelector(".app").hidden = false;
   document.getElementById("activeUser").textContent = user.email || "Usuario municipal";
-  document.getElementById("connectionLabel").textContent = "Sesión municipal";
+  document.getElementById("connectionLabel").textContent = `Sesión municipal · ${userRole === "admin" ? "Administrador" : "Usuario"}`;
   document.getElementById("signOutBtn").hidden = false;
   await loadRemoteAssets();
   if (realtimeChannel) await supabaseClient.removeChannel(realtimeChannel);
@@ -97,6 +99,7 @@ function showLogin(errorMessage = "") {
 
 function render() {
   const query = searchInput.value.trim().toLocaleLowerCase("es");
+  const canDeleteAssets = !supabaseReady || userRole === "admin";
   const filtered = assets.filter(asset => {
     const matchesQuery = [asset.name, asset.asset_code, asset.barcode, asset.location, asset.category, asset.custodian].some(value => String(value ?? "").toLocaleLowerCase("es").includes(query));
     return matchesQuery && (!categoryFilter.value || asset.category === categoryFilter.value) && (!conditionFilter.value || asset.condition === conditionFilter.value);
@@ -109,7 +112,7 @@ function render() {
     <td>${escapeHtml(asset.location)}</td>
     <td>${escapeHtml(asset.custodian || "Sin asignar")}</td>
     <td><span class="status-pill status-${escapeHtml(asset.condition.toLocaleLowerCase("es"))}">${escapeHtml(asset.condition)}</span></td>
-    <td><div class="row-actions"><button class="icon-button" type="button" data-action="edit" data-id="${escapeHtml(asset.id)}" aria-label="Editar ${escapeHtml(asset.name)}" title="Editar"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m14 5 5 5M4 20l4.2-.8L19 8.4 15.6 5 4.8 15.8 4 20Z"/></svg></button><button class="icon-button delete" type="button" data-action="delete" data-id="${escapeHtml(asset.id)}" aria-label="Eliminar ${escapeHtml(asset.name)}" title="Eliminar"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3"/></svg></button></div></td>
+    <td><div class="row-actions"><button class="icon-button" type="button" data-action="edit" data-id="${escapeHtml(asset.id)}" aria-label="Editar ${escapeHtml(asset.name)}" title="Editar"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m14 5 5 5M4 20l4.2-.8L19 8.4 15.6 5 4.8 15.8 4 20Z"/></svg></button>${canDeleteAssets ? `<button class="icon-button delete" type="button" data-action="delete" data-id="${escapeHtml(asset.id)}" aria-label="Eliminar ${escapeHtml(asset.name)}" title="Eliminar"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3"/></svg></button>` : ""}</div></td>
   </tr>`).join("");
   document.getElementById("emptyState").hidden = filtered.length > 0;
   document.querySelector(".table-scroll table").hidden = filtered.length === 0;
@@ -213,6 +216,10 @@ rows.addEventListener("click", async event => {
   const asset = assets.find(item => item.id === button.dataset.id);
   if (!asset) return;
   if (button.dataset.action === "edit") openModal(asset);
+  if (button.dataset.action === "delete" && supabaseReady && userRole !== "admin") {
+    showToast("Solo un administrador puede eliminar bienes.");
+    return;
+  }
   if (button.dataset.action === "delete" && confirm(`¿Eliminar "${asset.name}" (${asset.id}) del inventario?`)) {
     try {
       if (supabaseReady) {
@@ -233,17 +240,16 @@ categoryFilter.addEventListener("change", render);
 conditionFilter.addEventListener("change", render);
 document.getElementById("exportBtn").addEventListener("click", () => {
   if (!assets.length) { showToast("No hay bienes para exportar."); return; }
+  if (!window.XLSX) { showToast("No se pudo cargar el exportador de Excel. Revisa tu conexión a internet e inténtalo de nuevo."); return; }
   const columns = ["Código patrimonial", "Código de barras", "Nombre", "Categoría", "Cantidad", "Ambiente", "Responsable", "Estado", "Fecha de adquisición", "Valor referencial (S/)", "Observaciones"];
   const keys = ["asset_code", "barcode", "name", "category", "quantity", "location", "custodian", "condition", "acquired", "value", "notes"];
-  const csvCell = value => `"${String(value ?? "").replace(/"/g, '""')}"`;
-  const csv = [columns, ...assets.map(asset => keys.map(key => asset[key]))].map(line => line.map(csvCell).join(",")).join("\r\n");
-  const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = "inventario-patrimonial-huamancaca-chico.csv";
-  link.click();
-  URL.revokeObjectURL(link.href);
-  showToast("Inventario exportado a CSV.");
+  const rows = [columns, ...assets.map(asset => keys.map(key => asset[key] ?? ""))];
+  const workbook = window.XLSX.utils.book_new();
+  const worksheet = window.XLSX.utils.aoa_to_sheet(rows);
+  worksheet["!cols"] = [{ wch: 20 }, { wch: 18 }, { wch: 30 }, { wch: 24 }, { wch: 12 }, { wch: 24 }, { wch: 28 }, { wch: 14 }, { wch: 20 }, { wch: 22 }, { wch: 40 }];
+  window.XLSX.utils.book_append_sheet(workbook, worksheet, "Inventario");
+  window.XLSX.writeFile(workbook, "inventario-patrimonial-huamancaca-chico.xlsx");
+  showToast("Inventario exportado a Excel.");
 });
 
 async function stopScanner() {
@@ -335,6 +341,7 @@ document.getElementById("loginForm").addEventListener("submit", async event => {
 document.getElementById("signOutBtn").addEventListener("click", async () => {
   await supabaseClient.auth.signOut({ scope: "local" });
   assets = [];
+  userRole = "user";
   render();
   showLogin();
 });
@@ -345,6 +352,7 @@ if (supabaseReady) {
   supabaseClient.auth.onAuthStateChange((event, session) => {
     if (event === "SIGNED_OUT") {
       assets = [];
+      userRole = "user";
       render();
       showLogin();
     }

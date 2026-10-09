@@ -48,23 +48,33 @@ grant select, insert, update, delete on public.assets to authenticated;
 grant usage, select on sequence public.asset_code_seq to authenticated;
 
 drop policy if exists "Authenticated users can read assets" on public.assets;
-create policy "Authenticated users can read assets"
-	on public.assets for select to authenticated using (true);
+drop policy if exists "Authorized users can read assets" on public.assets;
+create policy "Authorized users can read assets"
+	on public.assets for select to authenticated
+	using (coalesce((select auth.jwt() -> 'app_metadata' ->> 'role'), 'user') in ('admin', 'user'));
 
 drop policy if exists "Authenticated users can register assets" on public.assets;
 create policy "Authenticated users can register assets"
 	on public.assets for insert to authenticated
-	with check (created_by = (select auth.uid()) and updated_by = (select auth.uid()));
+	with check (
+		coalesce((select auth.jwt() -> 'app_metadata' ->> 'role'), 'user') in ('admin', 'user')
+		and created_by = (select auth.uid())
+		and updated_by = (select auth.uid())
+	);
 
 drop policy if exists "Authenticated users can edit assets" on public.assets;
 create policy "Authenticated users can edit assets"
 	on public.assets for update to authenticated
-	using (true)
-	with check (updated_by = (select auth.uid()));
+	using (coalesce((select auth.jwt() -> 'app_metadata' ->> 'role'), 'user') in ('admin', 'user'))
+	with check (
+		coalesce((select auth.jwt() -> 'app_metadata' ->> 'role'), 'user') in ('admin', 'user')
+		and updated_by = (select auth.uid())
+	);
 
 drop policy if exists "Authenticated users can delete assets" on public.assets;
 create policy "Authenticated users can delete assets"
-	on public.assets for delete to authenticated using (true);
+	on public.assets for delete to authenticated
+	using (coalesce((select auth.jwt() -> 'app_metadata' ->> 'role'), 'user') = 'admin');
 
 create index if not exists assets_category_idx on public.assets (category);
 create index if not exists assets_location_idx on public.assets (location);

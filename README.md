@@ -18,7 +18,19 @@ Aplicación web para la Municipalidad Distrital de Huamancaca Chico. Puede traba
 4. En **Authentication > Sign In / Providers**, desactiva el registro público de usuarios. Después, en **Authentication > Users**, crea o invita una cuenta distinta para cada trabajador autorizado.
 5. Publica los archivos del proyecto en un servicio con HTTPS, como Netlify o Vercel. En Supabase, configura la URL del sitio en **Authentication > URL Configuration**. Abre el enlace publicado desde el celular y permite el uso de la cámara.
 
-La página muestra el inicio de sesión cuando encuentra las dos credenciales. Los seis bienes de ejemplo solo aparecen en modo local y no se copian a Supabase. Registra allí los bienes reales. Cada usuario autenticado puede consultar, registrar, editar y eliminar bienes; comparte las cuentas solo con personal autorizado.
+La página muestra el inicio de sesión cuando encuentra las dos credenciales. Los seis bienes de ejemplo solo aparecen en modo local y no se copian a Supabase. Registra allí los bienes reales. Los usuarios pueden consultar, registrar y editar bienes; solo los administradores pueden eliminarlos.
+
+### Roles de acceso
+
+Los permisos se verifican en Supabase mediante Row Level Security, además de ocultar el botón de eliminación a los usuarios normales. Una cuenta sin rol configurado se considera `user`. Para asignar el rol `admin`, abre **SQL Editor** en Supabase y ejecuta la siguiente consulta, reemplazando el correo por el de la cuenta que ya creaste:
+
+```sql
+update auth.users
+set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || '{"role":"admin"}'::jsonb
+where email = 'correo-administrador@institucion.gob.pe';
+```
+
+Confirma que la consulta afectó exactamente una cuenta (`UPDATE 1`). Luego esa persona debe cerrar sesión y volver a entrar para que se actualice su rol. Mantén desactivado el registro público; crea y administra las cuentas desde Supabase.
 
 ## Registrar con código de barras
 
@@ -29,9 +41,9 @@ La cámara del navegador solo funciona en un contexto seguro: HTTPS al publicar,
 ## Seguridad y respaldo
 
 - `config/supabase-config.js` contiene solo la URL y la clave pública del cliente. **Nunca** pongas una `service_role` o secret key en la página.
-- Mantén desactivado el registro público y crea las cuentas desde el panel de Supabase.
+- Mantén desactivado el registro público, crea las cuentas desde el panel de Supabase y limita el rol de administrador a personal de confianza.
 - El código de barras es único: no se guardan dos bienes con el mismo valor.
-- Exporta copias desde **Exportar CSV** y configura respaldos del proyecto de base de datos según las políticas municipales.
+- Exporta copias en formato Excel desde **Exportar Excel** y configura respaldos del proyecto de base de datos según las políticas municipales.
 - Los cambios de un usuario autenticado se sincronizan a las otras sesiones abiertas.
 
 ## Modo de demostración
