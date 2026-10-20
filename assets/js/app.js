@@ -24,7 +24,7 @@ function escapeHtml(value) {
 
 async function apiRequest(action, payload = null) {
   const options = { headers: { "Accept": "application/json" } };
-  let url = `api.php?action=${encodeURIComponent(action)}`;
+  let url = `api/api.php?action=${encodeURIComponent(action)}`;
 
   if (payload) {
     options.method = "POST";

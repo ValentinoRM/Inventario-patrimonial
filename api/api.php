@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/../src/auth.php';
-require_once __DIR__ . '/../src/assets.php';
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/assets.php';
 
 header('Content-Type: application/json; charset=utf-8');
 

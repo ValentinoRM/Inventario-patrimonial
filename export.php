@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/../src/auth.php';
-require_once __DIR__ . '/../src/assets.php';
+require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/assets.php';
 
 require_login();
 
@@ -12,7 +12,7 @@ $columns = ['Código patrimonial', 'Código de barras', 'Nombre', 'Categoría', 
 $keys    = ['asset_code', 'barcode', 'name', 'category', 'quantity', 'location', 'custodian', 'condition', 'acquired', 'value', 'notes'];
 $filename = 'inventario-patrimonial-huamancaca-chico';
 
-$autoload = __DIR__ . '/../vendor/autoload.php';
+$autoload = __DIR__ . '/vendor/autoload.php';
 
 if (is_file($autoload)) {
     require_once $autoload;

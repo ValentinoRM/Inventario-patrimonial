@@ -1,8 +1,21 @@
-# Redirige todas las peticiones al directorio público.
-# Úsalo solo si configuras el proyecto entero como raíz web (por ejemplo htdocs/inventario-patrimonial).
-# Lo ideal es apuntar el DocumentRoot del servidor directamente a la carpeta public/.
+# =====================================================================
+# Raíz web de la aplicación. Las páginas (index, login, ...) viven aquí.
+# Las carpetas internas quedan bloqueadas para Apache.
+# =====================================================================
+
+Options -Indexes
+
+# Bloquea carpetas y archivos internos.
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteCond %{REQUEST_URI} !/public/
-    RewriteRule ^(.*)$ public/$1 [L]
+
+    RewriteRule ^(config|includes|database|scripts|docs|tests|vendor)(/|$) - [F,L,NC]
+    RewriteRule ^(\.env|\.env\.example|composer\.(json|lock))$ - [F,L,NC]
+</IfModule>
+
+# Cabeceras de seguridad.
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set Referrer-Policy "same-origin"
 </IfModule>

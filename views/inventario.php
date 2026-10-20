@@ -1,15 +1,3 @@
-<?php
-declare(strict_types=1);
-
-require_once __DIR__ . '/../src/auth.php';
-
-require_login();
-
-$user       = current_user();
-$isAdmin    = is_admin();
-$userName   = $user['name'] !== '' ? $user['name'] : $user['email'];
-$roleLabel  = $isAdmin ? 'Administrador' : 'Usuario';
-?>
 <!doctype html>
 <html lang="es">
 <head>
