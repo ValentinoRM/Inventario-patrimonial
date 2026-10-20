@@ -1,0 +1,253 @@
+                  <!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#762b32">
+  <title>Inventario patrimonial | Municipalidad Distrital de Huamancaca Chico</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./assets/css/styles.css">
+</head>
+<body>
+  <section class="auth-screen" id="authScreen" hidden>
+    <form class="auth-card" id="loginForm">
+      <div class="auth-brand"><div class="brand-mark" aria-hidden="true">HC</div> Inventario patrimonial municipal</div>
+      <div class="eyebrow">Acceso al sistema</div>
+      <h1>Iniciar sesión</h1>
+      <p>Ingresa con la cuenta municipal que te asignó la persona administradora.</p>
+      <div class="field"><label for="loginEmail">Correo electrónico</label><input id="loginEmail" type="email" autocomplete="username" required></div>
+      <div class="field" style="margin-top:13px"><label for="loginPassword">Contraseña</label><input id="loginPassword" type="password" autocomplete="current-password" required></div>
+      <button class="button button-primary" type="submit" id="loginBtn">Ingresar</button>
+      <div class="auth-error" id="authError" role="alert" hidden></div>
+    </form>
+  </section>
+  <div class="app">
+    <aside class="sidebar" aria-label="Navegación principal">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">HC</div>
+        <div class="brand-copy"><strong>Municipalidad Distrital</strong><span>Huamancaca Chico · Junín</span></div>
+      </div>
+      <div class="nav-label">Gestión municipal</div>
+      <ul class="nav-list">
+        <li><a class="nav-link active" href="#inventario" aria-current="page"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h4"/></svg> Inventario patrimonial</a></li>
+      </ul>
+      <div class="side-spacer"></div>
+      <div class="side-note"><strong>Control de bienes</strong>Registro interno para organizar y consultar los bienes municipales.</div>
+    </aside>
+
+    <main class="main" id="inventario">
+      <div class="topbar">
+        <div class="crumb">Patrimonio <span aria-hidden="true">/</span> <strong>Inventario</strong></div>
+        <div class="user-chip"><div class="user-avatar" aria-hidden="true">HC</div><div class="user-text"><strong id="activeUser">Administración</strong><span id="connectionLabel">Modo demostración</span></div><button class="button button-light" id="signOutBtn" type="button" hidden>Cerrar sesión</button></div>
+      </div>
+
+      <header class="page-head">
+        <div><div class="eyebrow">Gestión patrimonial</div><h1>Inventario de bienes</h1><p>Organiza, consulta y mantén actualizado el patrimonio municipal.</p></div>
+        <div class="head-actions">
+          <div class="primary-actions">
+            <button class="button button-light" id="scanLookupBtn" type="button"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7V4h3m10 0h3v3M4 17v3h3m10 0h3v-3M5 12h14M8 9v6m3-6v6m3-6v6m3-6v6"/></svg> Escanear</button>
+            <button class="button button-primary" id="addBtn" type="button"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Registrar bien</button>
+          </div>
+          <div class="secondary-actions" aria-label="Otras acciones">
+            <button class="button button-light" id="importBtn" type="button">Importar Excel</button>
+            <input id="importFile" type="file" accept=".xlsx,.xls,.csv" hidden>
+            <button class="button button-light" id="exportBtn" type="button"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m-5-5 5 5 5-5M5 17v3h14v-3"/></svg> Exportar Excel</button>
+            <button class="button button-light" id="assignmentReportBtn" type="button">Acta de asignación</button>
+          </div>
+        </div>
+      </header>
+
+      <section class="metrics" aria-label="Resumen del inventario">
+        <article class="metric"><div class="metric-top"><span>Bienes registrados</span><span class="metric-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h4"/></svg></span></div><div class="metric-value" id="metricItems">0</div><div class="metric-detail">Unidades en inventario</div></article>
+        <article class="metric"><div class="metric-top"><span>En buen estado</span><span class="metric-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 12 4 4L19 6"/></svg></span></div><div class="metric-value" id="metricGood">0</div><div class="metric-detail">Bienes operativos</div></article>
+        <article class="metric"><div class="metric-top"><span>Requieren atención</span><span class="metric-icon amber"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 2.8 20h18.4L12 3Z"/><path d="M12 9v5m0 3h.01"/></svg></span></div><div class="metric-value" id="metricAttention">0</div><div class="metric-detail">Regulares o en mal estado</div></article>
+        <article class="metric"><div class="metric-top"><span>Ambientes ocupados</span><span class="metric-icon red"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 21V8l9-5 9 5v13M8 21v-7h8v7M7 9h.01M12 9h.01M17 9h.01"/></svg></span></div><div class="metric-value" id="metricLocations">0</div><div class="metric-detail">Ubicaciones registradas</div></article>
+      </section>
+
+      <div class="notice" id="demoNotice" role="status"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg><span>Vista de demostración: estos registros son datos de ejemplo. Reemplázalos por los bienes reales de la municipalidad. La información se guarda en este navegador.</span></div>
+      <div class="setup-notice" id="setupNotice" hidden>La base compartida aún no está conectada. Configura el proyecto de Supabase en <strong>config/supabase-config.js</strong> y aplica <strong>database/supabase-schema.sql</strong>. Mientras tanto, este navegador usa datos locales de demostración.</div>
+
+      <section class="inventory-section" aria-labelledby="tableTitle">
+        <div class="section-head"><div><h2 id="tableTitle">Registro de bienes</h2><span id="resultCount">0 registros</span></div></div>
+        <div class="table-panel">
+          <div class="toolbar">
+            <label class="searchbox"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m16 16 4 4"/></svg><input id="searchInput" type="search" placeholder="Buscar por nombre, código o ambiente..." aria-label="Buscar bienes"></label>
+            <div class="filters">
+              <select id="zoneFilter" aria-label="Filtrar por zona"><option value="">Todas las zonas</option></select>
+              <select id="locationFilter" aria-label="Filtrar por ambiente"><option value="">Todos los ambientes</option></select>
+              <select id="categoryFilter" aria-label="Filtrar por categoría"><option value="">Todas las categorías</option></select>
+              <select id="conditionFilter" aria-label="Filtrar por estado"><option value="">Todos los estados</option><option>Bueno</option><option>Regular</option><option>Malo</option></select>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>Bien / Código</th><th>Barcode</th><th>Categoría</th><th>Cantidad</th><th>Zona / Secretaría</th><th>Ambiente</th><th>Responsable</th><th>Estado</th><th>Verificación</th><th aria-label="Acciones"></th></tr></thead>
+              <tbody id="assetRows"></tbody>
+            </table>
+            <div class="empty-state" id="emptyState" hidden><strong>No hay bienes para mostrar</strong>Prueba otra búsqueda o registra un nuevo bien.</div>
+          </div>
+          <div class="table-foot"><span id="tableFootCount">0 bienes</span><span id="databaseStatus">Datos locales de demostración</span></div>
+        </div>
+      </section>
+
+      <section class="management-overview" aria-labelledby="overviewTitle">
+        <div class="overview-heading">
+          <div class="eyebrow">Consulta y control</div>
+          <h2 id="overviewTitle">Seguimiento y reportes</h2>
+          <p>Indicadores de zonas, verificación física, mantenimiento y actividad reciente.</p>
+        </div>
+
+      <section class="report-panel" aria-labelledby="reportTitle">
+        <div class="section-head report-head"><div><h2 id="reportTitle">Resumen por zona</h2><span id="reportDescription">Unidades registradas por ambiente o secretaría.</span></div><button class="button button-light" id="printReportBtn" type="button">Vista previa / Imprimir</button></div>
+        <div class="report-content">
+          <div class="zone-chart-wrap">
+            <svg id="zoneChart" class="zone-chart" viewBox="0 0 120 120" role="group" aria-label="Seleccionar una zona en el gráfico"></svg>
+            <div class="chart-center"><strong id="chartTotal">0</strong><span>unidades</span></div>
+          </div>
+          <div class="zone-legend" id="zoneLegend" aria-label="Seleccionar zona"></div>
+        </div>
+      </section>
+
+      <section class="operations-grid" aria-label="Control patrimonial">
+        <article class="operations-card">
+          <div class="section-head"><div><h2>Inventario físico</h2><span id="verificationSummary">Control de verificación por bienes.</span></div></div>
+          <div class="verification-score"><strong id="verificationPercent">0%</strong><span id="verificationCount">0 de 0 verificados</span></div>
+          <div class="progress-track"><div class="progress-value" id="verificationProgress"></div></div>
+          <p class="operations-hint">Usa “Verificar” en cada registro durante el recorrido por las oficinas.</p>
+        </article>
+        <article class="operations-card">
+          <div class="section-head"><div><h2>Mantenimiento</h2><span>Próximos vencimientos y tareas pendientes.</span></div><strong class="maintenance-count" id="maintenanceCount">0</strong></div>
+          <div class="maintenance-list" id="maintenanceList"></div>
+        </article>
+      </section>
+
+      <section class="location-map-panel" aria-labelledby="locationMapTitle">
+        <div class="section-head"><div><h2 id="locationMapTitle">Esquema de zonas y ambientes</h2><span>Vista organizada por secretaría y ubicación registrada.</span></div><button class="button button-light" id="clearLocationMapBtn" type="button">Ver todo</button></div>
+        <div class="location-map" id="locationMap"></div>
+      </section>
+
+      <section class="history-panel" aria-labelledby="historyPanelTitle">
+        <div class="section-head"><div><h2 id="historyPanelTitle">Actividad reciente</h2><span>Altas, cambios, traslados y bajas.</span></div><button class="button button-light" id="refreshHistoryBtn" type="button">Actualizar historial</button></div>
+        <div class="history-list" id="recentHistory"></div>
+      </section>
+
+      <section class="role-admin-panel" id="roleAdminSection" aria-labelledby="roleAdminTitle" hidden>
+        <div class="section-head"><div><h2 id="roleAdminTitle">Administración de usuarios</h2><span>Asigna el rol Administrador o Usuario.</span></div><button class="button button-light" id="refreshUsersBtn" type="button">Actualizar usuarios</button></div>
+        <div class="role-admin-status" id="roleAdminStatus" role="status">Cargando usuarios...</div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Correo electrónico</th><th>Rol</th><th>Acción</th></tr></thead>
+            <tbody id="userRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="photo-strip" aria-label="Identificación del inventario municipal">
+        <div class="photo-copy"><span>Municipalidad Distrital de Huamancaca Chico</span><strong>Patrimonio bajo control, gestión transparente.</strong></div>
+        <div class="photo-stamp">INVENTARIO MUNICIPAL</div>
+      </section>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="modalBackdrop" role="presentation">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head"><div><h2 id="modalTitle">Registrar bien</h2><p>Completa la información del bien patrimonial.</p></div><button class="modal-close" id="closeModal" type="button" aria-label="Cerrar">&times;</button></div>
+      <form id="assetForm">
+        <div class="form-grid">
+          <div class="field"><label for="name">Nombre del bien *</label><input id="name" name="name" required maxlength="90" placeholder="Ej. Escritorio de madera"></div>
+          <div class="field"><label for="category">Categoría *</label><select id="category" name="category" required><option value="">Seleccionar categoría</option><option>Muebles</option><option>Equipos informáticos</option><option>Electrodomésticos</option><option>Vehículos</option><option>Herramientas</option><option>Otros</option></select></div>
+          <div class="field full"><label for="barcode">Código de barras</label><div class="scan-field"><input id="barcode" name="barcode" maxlength="120" placeholder="Escanea o escribe el código del bien"><button class="button button-light" id="scanFormBtn" type="button" aria-label="Escanear código de barras"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7V4h3m10 0h3v3M4 17v3h3m10 0h3v-3M5 12h14M8 9v6m3-6v6m3-6v6m3-6v6"/></svg> Escanear</button></div></div>
+          <div class="field"><label for="quantity">Cantidad *</label><input id="quantity" name="quantity" type="number" min="1" max="99999" value="1" required></div>
+          <div class="field"><label for="condition">Estado de conservación *</label><select id="condition" name="condition" required><option>Bueno</option><option>Regular</option><option>Malo</option></select></div>
+          <div class="field"><label for="zone">Zona / Secretaría *</label><input id="zone" name="zone" required maxlength="70" placeholder="Ej. Secretaría general"></div>
+          <div class="field"><label for="location">Ambiente / ubicación *</label><input id="location" name="location" required maxlength="70" placeholder="Ej. Secretaría general"></div>
+          <div class="field"><label for="custodian">Responsable</label><input id="custodian" name="custodian" maxlength="70" placeholder="Nombre del responsable"></div>
+          <div class="field"><label for="acquired">Fecha de adquisición</label><input id="acquired" name="acquired" type="date"></div>
+          <div class="field"><label for="value">Valor referencial (S/)</label><input id="value" name="value" type="number" min="0" step="0.01" placeholder="0.00"></div>
+          <div class="field"><label for="maintenanceDue">Próximo mantenimiento</label><input id="maintenanceDue" name="maintenance_due" type="date"></div>
+          <div class="field"><label for="maintenanceNotes">Detalle de mantenimiento</label><input id="maintenanceNotes" name="maintenance_notes" maxlength="160" placeholder="Ej. Revisión preventiva"></div>
+          <div class="field full"><label for="assetFiles">Fotos, actas o documentos (máx. 5 MB por archivo)</label><input id="assetFiles" name="asset_files" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" multiple></div>
+          <div class="field full"><label for="notes">Observaciones</label><textarea id="notes" name="notes" maxlength="300" placeholder="Detalles adicionales del bien"></textarea></div>
+        </div>
+        <div class="modal-actions"><button class="button button-light" id="cancelModal" type="button">Cancelar</button><button class="button button-primary" type="submit" id="saveBtn">Guardar bien</button></div>
+      </form>
+    </section>
+  </div>
+  <div class="modal-backdrop" id="transferBackdrop" role="presentation">
+    <section class="modal compact-modal" role="dialog" aria-modal="true" aria-labelledby="transferTitle">
+      <div class="modal-head"><div><h2 id="transferTitle">Trasladar bien</h2><p id="transferAssetName"></p></div><button class="modal-close" id="closeTransfer" type="button" aria-label="Cerrar">&times;</button></div>
+      <form id="transferForm"><div class="form-grid">
+        <div class="field"><label for="transferZone">Zona / Secretaría *</label><input id="transferZone" required maxlength="70"></div>
+        <div class="field"><label for="transferLocation">Ambiente / ubicación *</label><input id="transferLocation" required maxlength="70"></div>
+        <div class="field full"><label for="transferCustodian">Responsable</label><input id="transferCustodian" maxlength="70"></div>
+        <div class="field full"><label for="transferReason">Motivo del traslado</label><textarea id="transferReason" maxlength="300"></textarea></div>
+      </div><div class="modal-actions"><button class="button button-light" id="cancelTransfer" type="button">Cancelar</button><button class="button button-primary" type="submit">Guardar traslado</button></div></form>
+    </section>
+  </div>
+  <div class="modal-backdrop" id="checkBackdrop" role="presentation">
+    <section class="modal compact-modal" role="dialog" aria-modal="true" aria-labelledby="checkTitle">
+      <div class="modal-head"><div><h2 id="checkTitle">Verificación física</h2><p id="checkAssetName"></p></div><button class="modal-close" id="closeCheck" type="button" aria-label="Cerrar">&times;</button></div>
+      <form id="checkForm"><div class="form-grid">
+        <div class="field full"><label for="checkStatus">Resultado de la verificación</label><select id="checkStatus"><option value="verified">Encontrado y verificado</option><option value="missing">No encontrado</option><option value="needs_attention">Requiere revisión</option></select></div>
+        <div class="field full"><label for="checkNotes">Observaciones</label><textarea id="checkNotes" maxlength="300"></textarea></div>
+      </div><div class="modal-actions"><button class="button button-light" id="cancelCheck" type="button">Cancelar</button><button class="button button-primary" type="submit">Guardar verificación</button></div></form>
+    </section>
+  </div>
+  <div class="modal-backdrop" id="importBackdrop" role="presentation">
+    <section class="modal compact-modal" role="dialog" aria-modal="true" aria-labelledby="importTitle">
+      <div class="modal-head"><div><h2 id="importTitle">Importar bienes</h2><p id="importSummary"></p></div><button class="modal-close" id="closeImport" type="button" aria-label="Cerrar">&times;</button></div>
+      <div class="import-preview" id="importPreview"></div>
+      <div class="modal-actions"><button class="button button-light" id="cancelImport" type="button">Cancelar</button><button class="button button-primary" id="confirmImport" type="button">Importar registros</button></div>
+    </section>
+  </div>
+  <div class="modal-backdrop" id="historyBackdrop" role="presentation">
+    <section class="modal compact-modal" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+      <div class="modal-head"><div><h2 id="historyTitle">Historial del bien</h2><p id="historyAssetName"></p></div><button class="modal-close" id="closeHistory" type="button" aria-label="Cerrar">&times;</button></div>
+      <div class="history-list modal-history-list" id="assetHistory"></div>
+    </section>
+  </div>
+  <div class="modal-backdrop" id="attachmentsBackdrop" role="presentation">
+    <section class="modal compact-modal" role="dialog" aria-modal="true" aria-labelledby="attachmentsTitle">
+      <div class="modal-head"><div><h2 id="attachmentsTitle">Fotos y documentos</h2><p id="attachmentsAssetName"></p></div><button class="modal-close" id="closeAttachments" type="button" aria-label="Cerrar">&times;</button></div>
+      <div class="attachment-list" id="attachmentList"></div>
+      <div class="modal-actions"><button class="button button-light" id="closeAttachmentsButton" type="button">Cerrar</button></div>
+    </section>
+  </div>
+  <div class="modal-backdrop" id="qrBackdrop" role="presentation">
+    <section class="modal compact-modal qr-modal" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
+      <div class="modal-head"><div><h2 id="qrTitle">Etiqueta QR patrimonial</h2><p id="qrAssetName"></p></div><button class="modal-close" id="closeQr" type="button" aria-label="Cerrar">&times;</button></div>
+      <div class="qr-card"><div id="qrCode"></div><strong id="qrAssetCode"></strong><span id="qrAssetDescription"></span></div>
+      <div class="modal-actions"><button class="button button-light" id="cancelQr" type="button">Cerrar</button><button class="button button-primary" id="printQrBtn" type="button">Imprimir etiqueta</button></div>
+    </section>
+  </div>
+  <div class="modal-backdrop" id="assignmentBackdrop" role="presentation">
+    <section class="modal compact-modal" role="dialog" aria-modal="true" aria-labelledby="assignmentTitle">
+      <div class="modal-head"><div><h2 id="assignmentTitle">Acta de asignación</h2><p>Genera un acta imprimible para una persona responsable.</p></div><button class="modal-close" id="closeAssignment" type="button" aria-label="Cerrar">&times;</button></div>
+      <form id="assignmentForm"><div class="form-grid">
+        <div class="field full"><label for="assignmentCustodian">Nombre del responsable *</label><input id="assignmentCustodian" required maxlength="100"></div>
+        <div class="field"><label for="assignmentZone">Zona / Secretaría</label><select id="assignmentZone"><option value="">Todas las zonas</option></select></div>
+        <div class="field"><label for="assignmentDate">Fecha</label><input id="assignmentDate" type="date" required></div>
+        <div class="field full"><label for="assignmentNotes">Observaciones del acta</label><textarea id="assignmentNotes" maxlength="300"></textarea></div>
+      </div><div class="modal-actions"><button class="button button-light" id="cancelAssignment" type="button">Cancelar</button><button class="button button-primary" type="submit">Vista previa / Imprimir acta</button></div></form>
+    </section>
+  </div>
+  <div class="scanner-backdrop" id="scannerBackdrop" role="presentation">
+    <section class="scanner-panel" role="dialog" aria-modal="true" aria-labelledby="scannerTitle">
+      <div class="scanner-head"><strong id="scannerTitle">Escanear código de barras</strong><button class="modal-close" id="closeScanner" type="button" aria-label="Cerrar escáner">&times;</button></div>
+      <div id="barcodeReader"></div>
+      <p class="scanner-hint" id="scannerHint">Centra el código de barras frente a la cámara. Si el navegador lo solicita, permite el acceso a la cámara.</p>
+    </section>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="./config/supabase-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="./assets/js/app.js"></script>
+</body>
+</html>
