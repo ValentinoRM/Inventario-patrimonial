@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/audit.php';
 
 $error = '';
 $alreadyInstalled = false;
@@ -26,19 +27,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyInstalled && $error === ''
     } else {
         try {
             $statement = db()->prepare(
-                "INSERT INTO users (email, password_hash, name, role) VALUES (:email, :hash, :name, 'admin')"
+                "INSERT INTO users (email, password_hash, name, role, status) VALUES (:email, :hash, :name, 'admin', 'activo')"
             );
             $statement->execute([
                 ':email' => $email,
                 ':hash'  => password_hash($password, PASSWORD_DEFAULT),
                 ':name'  => $name !== '' ? $name : 'Administrador',
             ]);
+            $id = (int) db()->lastInsertId();
+            audit_log('user_create', 'user', $id, ['role' => 'admin', 'email' => $email, 'via' => 'instalar']);
             $alreadyInstalled = true;
         } catch (Throwable $e) {
             $error = 'No se pudo crear la cuenta. Quizá el correo ya existe.';
         }
     }
 }
+
 ?>
 <!doctype html>
 <html lang="es">
@@ -54,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyInstalled && $error === ''
 <body>
   <section class="auth-screen">
     <form class="auth-card" method="post" action="instalar.php">
-      <div class="auth-brand"><div class="brand-mark" aria-hidden="true">HC</div> Inventario patrimonial municipal</div>
+      <div class="auth-brand"><div class="brand-mark" aria-hidden="true"><img src="./assets/img/icono.jpg" alt=""></div> Inventario patrimonial municipal</div>
       <div class="eyebrow">Configuración inicial</div>
       <h1>Crear administrador</h1>
 

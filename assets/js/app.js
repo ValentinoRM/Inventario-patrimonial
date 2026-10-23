@@ -1,6 +1,9 @@
 const config = window.APP_CONFIG ?? {};
 const csrfToken = config.csrfToken ?? "";
+const canEditAssets = Boolean(config.canEdit);
 const canDeleteAssets = Boolean(config.canDelete);
+const canTransferAssets = Boolean(config.canTransfer);
+const isAdmin = Boolean(config.isAdmin);
 
 let assets = [];
 let editingId = null;
@@ -17,6 +20,8 @@ const scannerBackdrop = document.getElementById("scannerBackdrop");
 const categoryFilter = document.getElementById("categoryFilter");
 const conditionFilter = document.getElementById("conditionFilter");
 const searchInput = document.getElementById("searchInput");
+const transferBackdrop = document.getElementById("transferBackdrop");
+const transferForm = document.getElementById("transferForm");
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
@@ -78,19 +83,26 @@ function render() {
     <td>${Number(asset.quantity) || 0}</td>
     <td>${escapeHtml(asset.location)}</td>
     <td>${escapeHtml(asset.custodian || "Sin asignar")}</td>
+    ${isAdmin ? `<td>${escapeHtml(asset.created_by_name || "—")}</td>` : ""}
     <td><span class="status-pill status-${escapeHtml(asset.condition.toLocaleLowerCase("es"))}">${escapeHtml(asset.condition)}</span></td>
-    <td><div class="row-actions"><button class="icon-button" type="button" data-action="edit" data-id="${escapeHtml(asset.id)}" aria-label="Editar ${escapeHtml(asset.name)}" title="Editar"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m14 5 5 5M4 20l4.2-.8L19 8.4 15.6 5 4.8 15.8 4 20Z"/></svg></button>${canDeleteAssets ? `<button class="icon-button delete" type="button" data-action="delete" data-id="${escapeHtml(asset.id)}" aria-label="Eliminar ${escapeHtml(asset.name)}" title="Eliminar"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3"/></svg></button>` : ""}</div></td>
+    ${isAdmin ? `<td><div class="row-actions">
+      ${canEditAssets ? `<button class="icon-button" type="button" data-action="edit" data-id="${escapeHtml(asset.id)}" aria-label="Editar ${escapeHtml(asset.name)}" title="Editar"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m14 5 5 5M4 20l4.2-.8L19 8.4 15.6 5 4.8 15.8 4 20Z"/></svg></button>` : ""}
+      ${canTransferAssets ? `<button class="icon-button" type="button" data-action="transfer" data-id="${escapeHtml(asset.id)}" aria-label="Trasladar ${escapeHtml(asset.name)}" title="Trasladar a otra área"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 8h13m-4-4 4 4-4 4M20 16H7m4 4-4-4 4-4"/></svg></button>` : ""}
+      ${canDeleteAssets ? `<button class="icon-button delete" type="button" data-action="delete" data-id="${escapeHtml(asset.id)}" aria-label="Eliminar ${escapeHtml(asset.name)}" title="Eliminar"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3"/></svg></button>` : ""}
+    </div></td>` : ""}
   </tr>`).join("");
   document.getElementById("emptyState").hidden = filtered.length > 0;
   document.querySelector(".table-scroll table").hidden = filtered.length === 0;
-  const totalUnits = assets.reduce((total, asset) => total + (Number(asset.quantity) || 0), 0);
-  const goodUnits = assets.filter(asset => asset.condition === "Bueno").reduce((total, asset) => total + (Number(asset.quantity) || 0), 0);
-  const attentionUnits = assets.filter(asset => asset.condition !== "Bueno").reduce((total, asset) => total + (Number(asset.quantity) || 0), 0);
-  const locations = new Set(assets.map(asset => String(asset.location ?? "").trim().toLocaleLowerCase("es")).filter(Boolean));
-  document.getElementById("metricItems").textContent = totalUnits.toLocaleString("es-PE");
-  document.getElementById("metricGood").textContent = goodUnits.toLocaleString("es-PE");
-  document.getElementById("metricAttention").textContent = attentionUnits.toLocaleString("es-PE");
-  document.getElementById("metricLocations").textContent = locations.size.toLocaleString("es-PE");
+  if (isAdmin) {
+    const totalUnits = assets.reduce((total, asset) => total + (Number(asset.quantity) || 0), 0);
+    const goodUnits = assets.filter(asset => asset.condition === "Bueno").reduce((total, asset) => total + (Number(asset.quantity) || 0), 0);
+    const attentionUnits = assets.filter(asset => asset.condition !== "Bueno").reduce((total, asset) => total + (Number(asset.quantity) || 0), 0);
+    const locations = new Set(assets.map(asset => String(asset.location ?? "").trim().toLocaleLowerCase("es")).filter(Boolean));
+    document.getElementById("metricItems").textContent = totalUnits.toLocaleString("es-PE");
+    document.getElementById("metricGood").textContent = goodUnits.toLocaleString("es-PE");
+    document.getElementById("metricAttention").textContent = attentionUnits.toLocaleString("es-PE");
+    document.getElementById("metricLocations").textContent = locations.size.toLocaleString("es-PE");
+  }
   document.getElementById("resultCount").textContent = `${filtered.length} ${filtered.length === 1 ? "registro" : "registros"}`;
   document.getElementById("tableFootCount").textContent = `${filtered.reduce((total, asset) => total + (Number(asset.quantity) || 0), 0)} bienes`;
   const categories = [...new Set(assets.map(asset => asset.category))].sort((a, b) => a.localeCompare(b, "es"));
@@ -114,7 +126,9 @@ function openModal(asset = null) {
   document.getElementById("modalTitle").textContent = editingId ? "Editar bien" : "Registrar bien";
   document.getElementById("saveBtn").textContent = editingId ? "Guardar cambios" : "Guardar bien";
   if (asset) {
-    for (const key of ["name", "category", "quantity", "condition", "location", "custodian", "acquired", "value", "notes", "barcode"]) form.elements[key].value = asset[key] ?? "";
+    for (const key of ["name", "category", "quantity", "condition", "location", "custodian", "acquired", "notes", "barcode"]) {
+      if (form.elements[key] !== undefined) form.elements[key].value = asset[key] ?? "";
+    }
   }
   backdrop.classList.add("open");
   document.getElementById("name").focus();
@@ -125,11 +139,53 @@ function closeModal() {
   editingId = null;
 }
 
+function openTransferModal(asset) {
+  if (!canTransferAssets || !transferForm) return;
+  transferForm.reset();
+  document.getElementById("transferId").value = asset.id;
+  document.getElementById("transferFrom").value = asset.location || "";
+  document.getElementById("transferTo").value = "";
+  document.getElementById("transferSubtitle").textContent = `${asset.name} (${asset.asset_code})`;
+  transferBackdrop.classList.add("open");
+  document.getElementById("transferTo").focus();
+}
+
+function closeTransferModal() {
+  if (transferBackdrop) transferBackdrop.classList.remove("open");
+}
+
+if (transferForm) {
+  transferForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    const values = Object.fromEntries(new FormData(transferForm).entries());
+    try {
+      const result = await apiRequest("transfer", {
+        id: Number(values.id),
+        to_location: values.to_location.trim(),
+        reason: values.reason.trim()
+      });
+      if (!result) return;
+      assets = assets.map(item => item.id === Number(values.id) ? result.asset : item);
+      render();
+      closeTransferModal();
+      showToast("Traslado registrado correctamente.");
+    } catch (error) {
+      showToast(`No se pudo trasladar: ${error.message}`);
+    }
+  });
+}
+
+const closeTransferBtn = document.getElementById("closeTransfer");
+if (closeTransferBtn) closeTransferBtn.addEventListener("click", closeTransferModal);
+const cancelTransferBtn = document.getElementById("cancelTransfer");
+if (cancelTransferBtn) cancelTransferBtn.addEventListener("click", closeTransferModal);
+if (transferBackdrop) transferBackdrop.addEventListener("click", event => { if (event.target === transferBackdrop) closeTransferModal(); });
+
 document.getElementById("addBtn").addEventListener("click", () => openModal());
 document.getElementById("closeModal").addEventListener("click", closeModal);
 document.getElementById("cancelModal").addEventListener("click", closeModal);
 backdrop.addEventListener("click", event => { if (event.target === backdrop) closeModal(); });
-document.addEventListener("keydown", event => { if (event.key === "Escape" && backdrop.classList.contains("open")) closeModal(); });
+document.addEventListener("keydown", event => { if (event.key === "Escape" && backdrop.classList.contains("open")) closeModal(); if (event.key === "Escape") closeTransferModal(); });
 
 form.addEventListener("submit", async event => {
   event.preventDefault();
@@ -144,7 +200,6 @@ form.addEventListener("submit", async event => {
     custodian: values.custodian.trim(),
     condition: values.condition,
     acquired: values.acquired || "",
-    value: Number(values.value) || 0,
     notes: values.notes.trim()
   };
   const saveButton = document.getElementById("saveBtn");
@@ -175,7 +230,8 @@ rows.addEventListener("click", async event => {
   if (!button) return;
   const asset = assets.find(item => item.id === Number(button.dataset.id));
   if (!asset) return;
-  if (button.dataset.action === "edit") openModal(asset);
+  if (button.dataset.action === "edit") { if (canEditAssets) openModal(asset); else showToast("Solo el administrador puede editar bienes."); }
+  if (button.dataset.action === "transfer") { openTransferModal(asset); }
   if (button.dataset.action === "delete" && confirm(`¿Eliminar "${asset.name}" (${asset.asset_code}) del inventario?`)) {
     try {
       await apiRequest("delete", { id: asset.id });
@@ -192,10 +248,13 @@ searchInput.addEventListener("input", render);
 categoryFilter.addEventListener("change", render);
 conditionFilter.addEventListener("change", render);
 
-document.getElementById("exportBtn").addEventListener("click", () => {
-  if (!assets.length) { showToast("No hay bienes para exportar."); return; }
-  window.location.href = "export.php";
-});
+const exportBtn = document.getElementById("exportBtn");
+if (exportBtn) {
+  exportBtn.addEventListener("click", () => {
+    if (!assets.length) { showToast("No hay bienes para exportar."); return; }
+    window.location.href = "export.php";
+  });
+}
 
 async function stopScanner() {
   if (barcodeScanner) {
@@ -255,7 +314,8 @@ async function startScanner(target) {
   }
 }
 
-document.getElementById("scanLookupBtn").addEventListener("click", () => startScanner("lookup"));
+const scanLookupBtn = document.getElementById("scanLookupBtn");
+if (scanLookupBtn) scanLookupBtn.addEventListener("click", () => startScanner("lookup"));
 document.getElementById("scanFormBtn").addEventListener("click", () => startScanner("form"));
 document.getElementById("closeScanner").addEventListener("click", stopScanner);
 scannerBackdrop.addEventListener("click", event => { if (event.target === scannerBackdrop) stopScanner(); });
@@ -266,7 +326,7 @@ document.addEventListener("keydown", event => {
 loadAssets();
 
 refreshTimer = setInterval(() => {
-  if (document.visibilityState === "visible" && !backdrop.classList.contains("open") && !scannerBackdrop.classList.contains("open")) {
+  if (document.visibilityState === "visible" && !backdrop.classList.contains("open") && !(transferBackdrop && transferBackdrop.classList.contains("open")) && !scannerBackdrop.classList.contains("open")) {
     loadAssets(false);
   }
 }, 20000);

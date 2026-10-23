@@ -19,10 +19,15 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     name          VARCHAR(120) NOT NULL DEFAULT '',
     role          ENUM('admin', 'user') NOT NULL DEFAULT 'user',
+    status        ENUM('activo', 'inactivo') NOT NULL DEFAULT 'activo',
+    last_login_at DATETIME DEFAULT NULL,
+    last_login_ip VARCHAR(45) DEFAULT NULL,
     created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
-    UNIQUE KEY users_email_unique (email)
+    UNIQUE KEY users_email_unique (email),
+    KEY users_status_idx (status),
+    KEY users_role_idx (role)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
@@ -65,6 +70,44 @@ CREATE TABLE IF NOT EXISTS assets (
     KEY assets_location_idx (location),
     CONSTRAINT assets_created_by_fk FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE SET NULL,
     CONSTRAINT assets_updated_by_fk FOREIGN KEY (updated_by) REFERENCES users (id) ON DELETE SET NULL
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Historial de traslados de bienes entre ambientes / áreas
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS asset_movements (
+    id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    asset_id      BIGINT UNSIGNED NOT NULL,
+    from_location VARCHAR(70) NOT NULL,
+    to_location   VARCHAR(70) NOT NULL,
+    reason        VARCHAR(200) NOT NULL DEFAULT '',
+    moved_by      INT UNSIGNED DEFAULT NULL,
+    created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY asset_movements_asset_idx (asset_id, created_at),
+    KEY asset_movements_user_idx (moved_by),
+    CONSTRAINT asset_movements_asset_fk FOREIGN KEY (asset_id) REFERENCES assets (id) ON DELETE CASCADE,
+    CONSTRAINT asset_movements_user_fk FOREIGN KEY (moved_by) REFERENCES users (id) ON DELETE SET NULL
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Bitácora de auditoría
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS audit_log (
+    id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id    INT UNSIGNED DEFAULT NULL,
+    action     VARCHAR(40) NOT NULL,
+    entity     VARCHAR(40) NOT NULL,
+    entity_id  BIGINT UNSIGNED DEFAULT NULL,
+    details    JSON DEFAULT NULL,
+    ip_address VARCHAR(45) DEFAULT NULL,
+    user_agent VARCHAR(255) DEFAULT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY audit_log_user_idx (user_id),
+    KEY audit_log_entity_idx (entity, entity_id),
+    KEY audit_log_created_idx (created_at),
+    CONSTRAINT audit_log_user_fk FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------

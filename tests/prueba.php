@@ -34,12 +34,10 @@ verificar('DB_USER definido desde .env', DB_USER !== '');
     'custodian' => 'Juan Pérez',
     'condition' => 'Bueno',
     'acquired'  => '2026-01-15',
-    'value'     => '350.50',
     'notes'     => 'Prueba',
     'barcode'   => '',
 ]);
 verificar('Entrada válida sin errores', $errores === []);
-verificar('Valor numérico redondeado', $datos['value'] === 350.50);
 verificar('Barcode vacío se vuelve null', $datos['barcode'] === null);
 
 // Entradas inválidas

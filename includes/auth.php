@@ -2,11 +2,14 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/helpers.php';
 
 if (session_status() === PHP_SESSION_NONE) {
+    $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
     session_set_cookie_params([
         'httponly' => true,
         'samesite' => 'Lax',
+        'secure'   => $secure,
     ]);
     session_start();
 }
@@ -37,10 +40,41 @@ function is_admin(): bool
     return ($user['role'] ?? '') === 'admin';
 }
 
+/**
+ * Refresca rol, nombre y estado desde la base de datos.
+ * Devuelve false si la cuenta ya no existe o fue desactivada.
+ */
+function refresh_session_user(): bool
+{
+    if (empty($_SESSION['user_id'])) {
+        return false;
+    }
+
+    $statement = db()->prepare('SELECT id, email, name, role, status FROM users WHERE id = :id LIMIT 1');
+    $statement->execute([':id' => (int) $_SESSION['user_id']]);
+    $row = $statement->fetch();
+
+    if (!$row || ($row['status'] ?? 'activo') !== 'activo') {
+        return false;
+    }
+
+    $_SESSION['email'] = (string) $row['email'];
+    $_SESSION['name']  = (string) $row['name'];
+    $_SESSION['role']  = (string) $row['role'];
+
+    return true;
+}
+
 function require_login(): void
 {
     if (!is_logged_in()) {
         header('Location: login.php');
+        exit;
+    }
+
+    if (!refresh_session_user()) {
+        logout_user();
+        header('Location: login.php?inactive=1');
         exit;
     }
 }
@@ -82,3 +116,4 @@ function csrf_valid(?string $token): bool
         && !empty($_SESSION['csrf_token'])
         && hash_equals($_SESSION['csrf_token'], $token);
 }
+

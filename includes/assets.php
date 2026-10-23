@@ -12,12 +12,61 @@ function fetch_assets(?PDO $pdo = null): array
 {
     $pdo = $pdo ?? db();
     $rows = $pdo->query(
-        'SELECT id, asset_code, barcode, name, category, quantity, location, custodian, `condition`, acquired_on, value, notes, created_at, updated_at
-         FROM assets
-         ORDER BY created_at DESC, id DESC'
+        'SELECT a.id, a.asset_code, a.barcode, a.name, a.category, a.quantity, a.location, a.custodian, a.`condition`, a.acquired_on, a.notes, a.created_at, a.updated_at, a.created_by, a.updated_by,
+                creator.name AS created_by_name, creator.email AS created_by_email,
+                updater.name AS updated_by_name, updater.email AS updated_by_email
+         FROM assets a
+         LEFT JOIN users creator ON creator.id = a.created_by
+         LEFT JOIN users updater ON updater.id = a.updated_by
+         ORDER BY a.created_at DESC, a.id DESC'
     )->fetchAll();
 
     return array_map('map_asset', $rows);
+}
+
+/**
+ * Obtiene un bien por su ID.
+ */
+function get_asset(PDO $pdo, int $id): ?array
+{
+    $statement = $pdo->prepare(
+        'SELECT a.id, a.asset_code, a.barcode, a.name, a.category, a.quantity, a.location, a.custodian, a.`condition`, a.acquired_on, a.notes, a.created_at, a.updated_at, a.created_by, a.updated_by,
+                creator.name AS created_by_name, creator.email AS created_by_email,
+                updater.name AS updated_by_name, updater.email AS updated_by_email
+         FROM assets a
+         LEFT JOIN users creator ON creator.id = a.created_by
+         LEFT JOIN users updater ON updater.id = a.updated_by
+         WHERE a.id = :id'
+    );
+    $statement->execute([':id' => $id]);
+    $row = $statement->fetch();
+
+    if (!$row) {
+        return null;
+    }
+
+    return array_merge(map_asset($row), [
+        'created_by' => $row['created_by'] !== null ? (int) $row['created_by'] : null,
+        'updated_by' => $row['updated_by'] !== null ? (int) $row['updated_by'] : null,
+        'raw'        => $row,
+    ]);
+}
+
+/**
+ * Historial de traslados de un bien.
+ */
+function fetch_asset_movements(PDO $pdo, int $assetId): array
+{
+    $statement = $pdo->prepare(
+        'SELECT m.id, m.asset_id, m.from_location, m.to_location, m.reason, m.created_at, u.name AS moved_by_name, u.email AS moved_by_email
+         FROM asset_movements m
+         LEFT JOIN users u ON u.id = m.moved_by
+         WHERE m.asset_id = :asset_id
+         ORDER BY m.created_at DESC, m.id DESC'
+    );
+    $statement->execute([':asset_id' => $assetId]);
+
+    return $statement->fetchAll();
 }
 
 /**
@@ -36,9 +85,67 @@ function map_asset(array $row): array
         'custodian'  => (string) ($row['custodian'] ?? ''),
         'condition'  => (string) $row['condition'],
         'acquired'   => (string) ($row['acquired_on'] ?? ''),
-        'value'      => (float) $row['value'],
         'notes'      => (string) ($row['notes'] ?? ''),
+        'created_by'      => isset($row['created_by']) ? (int) $row['created_by'] : null,
+        'created_by_name' => (string) ($row['created_by_name'] ?? ''),
+        'updated_by_name' => (string) ($row['updated_by_name'] ?? ''),
     ];
+}
+
+/**
+ * Resumen general del inventario para reportes.
+ */
+function fetch_inventory_summary(PDO $pdo): array
+{
+    $row = $pdo->query(
+        'SELECT COUNT(*) AS records, COALESCE(SUM(quantity), 0) AS units,
+                COUNT(DISTINCT location) AS locations
+         FROM assets'
+    )->fetch();
+
+    return [
+        'records'   => (int) ($row['records'] ?? 0),
+        'units'     => (int) ($row['units'] ?? 0),
+        'locations' => (int) ($row['locations'] ?? 0),
+    ];
+}
+
+/**
+ * Agrupaciones para reportes.
+ */
+function fetch_inventory_breakdown(PDO $pdo, string $column): array
+{
+    $allowed = ['category', 'location', 'condition'];
+    if (!in_array($column, $allowed, true)) {
+        throw new InvalidArgumentException('Agrupación no permitida.');
+    }
+
+    return $pdo->query(
+        "SELECT `$column` AS label, COUNT(*) AS records, COALESCE(SUM(quantity), 0) AS units
+         FROM assets
+         GROUP BY `$column`
+         ORDER BY units DESC, label ASC"
+    )->fetchAll();
+}
+
+/**
+ * Últimos traslados registrados en el sistema.
+ */
+function fetch_recent_movements(PDO $pdo, int $limit = 20): array
+{
+    $limit = max(1, min($limit, 200));
+    $rows = $pdo->query(
+        "SELECT m.id, m.asset_id, m.from_location, m.to_location, m.reason, m.created_at,
+                a.asset_code, a.name AS asset_name,
+                u.name AS moved_by_name, u.email AS moved_by_email
+         FROM asset_movements m
+         INNER JOIN assets a ON a.id = m.asset_id
+         LEFT JOIN users u ON u.id = m.moved_by
+         ORDER BY m.created_at DESC, m.id DESC
+         LIMIT $limit"
+    )->fetchAll();
+
+    return $rows;
 }
 
 /**
@@ -109,14 +216,6 @@ function validate_asset_input(array $input): array
         $errors[] = 'La fecha de adquisición no es válida.';
     }
 
-    $value = $input['value'] ?? 0;
-    if ($value === '' || $value === null) {
-        $value = 0;
-    }
-    if (!is_numeric($value) || (float) $value < 0) {
-        $errors[] = 'El valor referencial no es válido.';
-    }
-
     $notes = trim((string) ($input['notes'] ?? ''));
     if (mb_strlen($notes) > 300) {
         $errors[] = 'Las observaciones no deben superar 300 caracteres.';
@@ -131,7 +230,6 @@ function validate_asset_input(array $input): array
         'condition'   => $condition,
         'barcode'     => $barcode !== '' ? $barcode : null,
         'acquired_on' => $acquired !== '' ? $acquired : null,
-        'value'       => round((float) $value, 2),
         'notes'       => $notes,
     ], $errors];
 }

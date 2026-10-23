@@ -2,13 +2,14 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/audit.php';
 
 if (is_logged_in()) {
     header('Location: index.php');
     exit;
 }
 
-$error = '';
+$error = isset($_GET['inactive']) ? 'Tu cuenta fue desactivada o ya no tiene acceso. Contacta al administrador.' : '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email    = trim((string) ($_POST['email'] ?? ''));
@@ -18,17 +19,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'La sesión expiró. Vuelve a intentarlo.';
     } else {
         try {
-            $statement = db()->prepare('SELECT id, email, password_hash, name, role FROM users WHERE email = :email LIMIT 1');
+            $statement = db()->prepare('SELECT id, email, password_hash, name, role, status FROM users WHERE email = :email LIMIT 1');
             $statement->execute([':email' => $email]);
             $user = $statement->fetch();
 
             if ($user && password_verify($password, $user['password_hash'])) {
-                login_user($user);
-                header('Location: index.php');
-                exit;
-            }
+                if (($user['status'] ?? 'activo') !== 'activo') {
+                    audit_log('login_failed', 'user', (int) $user['id'], ['email' => $email, 'reason' => 'inactive']);
+                    $error = 'Tu cuenta se encuentra inactiva. Contacta al administrador.';
+                } else {
+                    login_user($user);
 
-            $error = 'Correo o contraseña incorrectos.';
+                    try {
+                        $update = db()->prepare('UPDATE users SET last_login_at = NOW(), last_login_ip = :ip WHERE id = :id');
+                        $update->execute([
+                            ':ip' => substr((string) ($_SERVER['REMOTE_ADDR'] ?? ''), 0, 45),
+                            ':id' => (int) $user['id'],
+                        ]);
+                    } catch (Throwable $ignore) {
+                    }
+
+                    audit_log('login', 'user', (int) $user['id'], ['email' => $email], (int) $user['id']);
+                    header('Location: index.php');
+                    exit;
+                }
+            } else {
+                try {
+                    audit_log('login_failed', 'user', null, ['email' => $email]);
+                } catch (Throwable $ignore) {
+                }
+                $error = 'Correo o contraseña incorrectos.';
+            }
         } catch (Throwable $e) {
             $error = 'No se pudo conectar con la base de datos. Revisa config/database.php.';
         }
@@ -40,7 +61,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#762b32">
+  <meta name="theme-color" content="#1f6f58">
+  <link rel="icon" type="image/jpeg" href="./assets/img/icono.jpg">
   <title>Iniciar sesión | Inventario patrimonial</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -50,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
   <section class="auth-screen">
     <form class="auth-card" method="post" action="login.php">
-      <div class="auth-brand"><div class="brand-mark" aria-hidden="true">HC</div> Inventario patrimonial municipal</div>
+      <div class="auth-brand"><div class="brand-mark" aria-hidden="true"><img src="./assets/img/icono.jpg" alt=""></div> Inventario patrimonial municipal</div>
       <div class="eyebrow">Acceso al sistema</div>
       <h1>Iniciar sesión</h1>
       <p>Ingresa con la cuenta municipal que te asignó la persona administradora.</p>

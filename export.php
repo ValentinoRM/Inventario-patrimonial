@@ -6,10 +6,17 @@ require_once __DIR__ . '/includes/assets.php';
 
 require_login();
 
+if (!is_admin()) {
+    http_response_code(403);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo 'Solo un administrador puede exportar el inventario.';
+    exit;
+}
+
 $assets = fetch_assets();
 
-$columns = ['Código patrimonial', 'Código de barras', 'Nombre', 'Categoría', 'Cantidad', 'Ambiente', 'Responsable', 'Estado', 'Fecha de adquisición', 'Valor referencial (S/)', 'Observaciones'];
-$keys    = ['asset_code', 'barcode', 'name', 'category', 'quantity', 'location', 'custodian', 'condition', 'acquired', 'value', 'notes'];
+$columns = ['Código patrimonial', 'Código de barras', 'Nombre', 'Categoría', 'Cantidad', 'Ambiente', 'Responsable', 'Estado', 'Fecha de adquisición', 'Observaciones'];
+$keys    = ['asset_code', 'barcode', 'name', 'category', 'quantity', 'location', 'custodian', 'condition', 'acquired', 'notes'];
 $filename = 'inventario-patrimonial-huamancaca-chico';
 
 $autoload = __DIR__ . '/vendor/autoload.php';
@@ -22,7 +29,7 @@ if (is_file($autoload)) {
     $sheet->setTitle('Inventario');
 
     $sheet->fromArray($columns, null, 'A1');
-    $sheet->getStyle('A1:K1')->getFont()->setBold(true);
+    $sheet->getStyle('A1:J1')->getFont()->setBold(true);
 
     $rowIndex = 2;
     foreach ($assets as $asset) {
@@ -34,7 +41,7 @@ if (is_file($autoload)) {
         $rowIndex++;
     }
 
-    foreach (['A' => 20, 'B' => 18, 'C' => 30, 'D' => 24, 'E' => 12, 'F' => 24, 'G' => 28, 'H' => 14, 'I' => 20, 'J' => 22, 'K' => 40] as $column => $width) {
+    foreach (['A' => 20, 'B' => 18, 'C' => 30, 'D' => 24, 'E' => 12, 'F' => 24, 'G' => 28, 'H' => 14, 'I' => 20, 'J' => 40] as $column => $width) {
         $sheet->getColumnDimension($column)->setWidth($width);
     }
 
