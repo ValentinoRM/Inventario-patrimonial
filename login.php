@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'La sesión expiró. Vuelve a intentarlo.';
     } else {
         try {
-            $statement = db()->prepare('SELECT id, email, password_hash, name, role, status FROM users WHERE email = :email LIMIT 1');
+            $statement = db()->prepare('SELECT id, email, password_hash, name, role, status, must_change_password FROM users WHERE email = :email LIMIT 1');
             $statement->execute([':email' => $email]);
             $user = $statement->fetch();
 
@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
 
                     audit_log('login', 'user', (int) $user['id'], ['email' => $email], (int) $user['id']);
-                    header('Location: index.php');
+                    header('Location: ' . (!empty($user['must_change_password']) ? 'cambiar-clave.php' : 'index.php'));
                     exit;
                 }
             } else {

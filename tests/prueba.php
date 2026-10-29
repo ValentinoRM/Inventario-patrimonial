@@ -7,6 +7,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/../includes/assets.php';
+require_once __DIR__ . '/../includes/areas.php';
 
 $fallas = 0;
 
@@ -30,7 +31,7 @@ verificar('DB_USER definido desde .env', DB_USER !== '');
     'name'      => 'Escritorio de madera',
     'category'  => 'Muebles',
     'quantity'  => 2,
-    'location'  => 'Secretaría general',
+    'area_id'   => 1,
     'custodian' => 'Juan Pérez',
     'condition' => 'Bueno',
     'acquired'  => '2026-01-15',
@@ -49,7 +50,7 @@ verificar('Cantidad 0 es inválida', in_array('La cantidad debe ser un número e
     'name'      => 'X',
     'category'  => 'Muebles',
     'quantity'  => 1,
-    'location'  => 'Aula',
+    'area_id'   => 1,
     'condition' => 'Excelente',
 ]);
 verificar('Estado fuera de opciones genera error', $errores !== []);
@@ -58,11 +59,30 @@ verificar('Estado fuera de opciones genera error', $errores !== []);
     'name'      => 'X',
     'category'  => 'Muebles',
     'quantity'  => 1,
-    'location'  => 'Aula',
+    'condition' => 'Bueno',
+]);
+verificar('Bien sin área genera error', in_array('El área es obligatoria.', $errores, true));
+
+[, $errores] = validate_asset_input([
+    'name'      => 'X',
+    'category'  => 'Muebles',
+    'quantity'  => 1,
+    'area_id'   => 1,
     'condition' => 'Bueno',
     'acquired'  => '15/01/2026',
 ]);
 verificar('Fecha mal formateada genera error', $errores !== []);
+
+// Áreas
+[$area, $erroresArea] = validate_area_input(['name' => 'Secretaría general', 'status' => 'activo']);
+verificar('Área válida sin errores', $erroresArea === []);
+verificar('Nombre de área se recorta', $area['name'] === 'Secretaría general');
+
+[$_, $erroresArea] = validate_area_input(['name' => '   ', 'status' => 'activo']);
+verificar('Área sin nombre genera error', $erroresArea !== []);
+
+[$_, $erroresArea] = validate_area_input(['name' => 'Almacén', 'status' => 'eliminada']);
+verificar('Estado de área inválido genera error', $erroresArea !== []);
 
 echo $fallas === 0 ? "\nTodas las pruebas pasaron.\n" : "\n$fallas prueba(s) fallaron.\n";
 exit($fallas === 0 ? 0 : 1);

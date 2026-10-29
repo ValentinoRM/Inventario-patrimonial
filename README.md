@@ -1,6 +1,6 @@
 # Inventario patrimonial municipal
 
-Aplicación web en **PHP + MySQL** para la Municipalidad Distrital de Huamancaca Chico. Permite registrar, consultar, editar y trasladar los bienes patrimoniales municipales, con autenticación, roles, auditoría y reportes.
+Aplicación web en **PHP + MySQL** para la Municipalidad Distrital de Huamancaca Chico. Permite registrar, consultar, editar y cambiar de área los bienes patrimoniales municipales, con autenticación, roles, auditoría y reportes.
 
 ## Requisitos
 
@@ -18,19 +18,23 @@ inventario-patrimonial/          # Raíz web (DocumentRoot apunta aquí)
 ├── instalar.php                # Creación del primer administrador
 ├── perfil.php                  # Cambio de contraseña del usuario actual
 ├── usuarios.php                # Administración de usuarios (solo admin)
-├── reportes.php                # Reportes y traslados recientes (solo admin)
+├── areas.php                   # Catálogo de áreas (solo admin)
+├── reportes.php                # Reportes y cambios de área recientes (solo admin)
 ├── auditoria.php               # Bitácora de acciones (solo admin)
 ├── export.php                  # Exportación a Excel/CSV
 ├── views/
 │   ├── inventario.php          # Página del inventario
 │   ├── 403.php                 # Acceso denegado
-│   └── partials/               # Cabecera, barra lateral y topbar compartidos
+│   └── partials/               # Cabecera, barra lateral, topbar y modal de exportación
 ├── api/
-│   ├── api.php                 # Endpoints JSON de bienes y traslados
+│   ├── api.php                 # Endpoints JSON de bienes y cambios de área
+│   ├── areas.php               # Endpoints JSON del catálogo de áreas
 │   └── users.php               # Endpoints JSON de usuarios y contraseñas
 ├── assets/
 │   ├── css/styles.css
-│   ├── js/app.js               # Inventario, escáner y traslados
+│   ├── js/app.js               # Inventario, escáner, áreas y cambios de área
+│   ├── js/areas.js             # Gestión de áreas
+│   ├── js/export-preview.js    # Vista previa de exportación
 │   └── js/usuarios.js          # Gestión de usuarios
 ├── config/
 │   ├── database.php            # Conexión PDO a MySQL (lee .env)
@@ -38,13 +42,15 @@ inventario-patrimonial/          # Raíz web (DocumentRoot apunta aquí)
 ├── includes/                   # Código interno (bloqueado para la web)
 │   ├── auth.php                # Sesión, roles, CSRF y estado de la cuenta
 │   ├── assets.php              # Acceso a datos, validación y reportes
+│   ├── areas.php               # Acceso a datos y validación de áreas
 │   ├── audit.php               # Registro en la bitácora
 │   ├── helpers.php             # Utilidades de formato y etiquetas
 │   └── permissions.php         # Control de acceso a secciones administrativas
 ├── database/
 │   ├── schema.sql              # Estructura completa (instalaciones nuevas)
 │   └── migrations/
-│       └── 001_roles_auditoria.sql  # Migración para bases existentes
+│       ├── 001_roles_auditoria.sql  # Migración para bases existentes
+│       └── 002_areas.sql            # Catálogo de áreas y relación con bienes
 ├── scripts/                    # Utilidades de terminal
 │   ├── iniciar.sh              # Arranque/parada del servidor de desarrollo
 │   ├── router-dev.php          # Router que protege carpetas internas en php -S
@@ -72,10 +78,10 @@ Las carpetas `config/`, `includes/`, `database/`, `scripts/`, `docs/`, `tests/` 
    ```bash
    cp .env.example .env
    ```
-   Editable en `.env`: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS` y `APP_PORT`. Las variables de entorno reales (Docker/Apache) tienen prioridad sobre `.env`, y `.env` sobre los valores por defecto. El archivo `.env` está en `.gitignore`: nunca se sube al repositorio.
+   Editable en `.env`: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `APP_HOST` y `APP_PORT`. Para probar desde otros equipos de la red, configura `APP_HOST` con la IP local de este equipo (por ejemplo, `192.168.1.51`). Las variables de entorno reales (Docker/Apache) tienen prioridad sobre `.env`, y `.env` sobre los valores por defecto. El archivo `.env` está en `.gitignore`: nunca se sube al repositorio.
 4. Abre la aplicación en el navegador. Para desarrollo local basta:
    ```bash
-   ./scripts/iniciar.sh          # arranca en http://127.0.0.1:8000 (lee APP_PORT de .env)
+   ./scripts/iniciar.sh          # arranca en http://APP_HOST:APP_PORT (lee .env)
    ./scripts/iniciar.sh stop     # detiene el servidor
    ```
    En un servidor real apunta el **DocumentRoot** a la raíz del proyecto (donde está `index.php`) y accede a `http://localhost/inventario-patrimonial/`. Requiere `mod_rewrite` y `mod_headers` de Apache para que el `.htaccess` bloquee las carpetas internas.
@@ -89,13 +95,19 @@ Las carpetas `config/`, `includes/`, `database/`, `scripts/`, `docs/`, `tests/` 
 
 ### Actualizar una instalación existente
 
-Si la base de datos ya tenía la versión anterior (sin estados de usuario ni auditoría), aplica la migración una sola vez:
+Si la base de datos ya tenía una versión anterior, aplica las migraciones una sola vez y en orden:
 
 ```bash
 mysql -u root -p inventario_patrimonial < database/migrations/001_roles_auditoria.sql
+mysql -u root -p inventario_patrimonial < database/migrations/002_areas.sql
+mysql -u root -p inventario_patrimonial < database/migrations/003_cambio_clave_obligatorio.sql
 ```
 
-La migración agrega `users.status`, `users.last_login_at`, `users.last_login_ip`, la tabla `asset_movements` y la tabla `audit_log`. Es idempotente: si los cambios ya existen, no falla. Las cuentas existentes quedan como `activo` y conservan su rol.
+La migración 001 agrega estados de usuario, último acceso, traslados y auditoría. La migración 002 crea el catálogo `areas`, agrega `assets.area_id` y convierte las ubicaciones actuales en áreas asignadas a cada bien. La migración 003 añade la marca de cambio obligatorio de contraseña. Las tres son idempotentes: si los cambios ya existen, no fallan.
+
+Al actualizar una instalación existente, las cuentas actuales deberán cambiar su contraseña una vez. Al crear una cuenta o restablecer su contraseña, la persona también deberá cambiarla al iniciar sesión, incluidos los administradores. Después del cambio, podrá seguir usando su nueva contraseña sin volver a recibir esa solicitud, hasta que se le asigne otra contraseña.
+
+Después de aplicar la migración 002, revisa en **Áreas** que los nombres convertidos sean correctos y corrige o desactiva los que no correspondan.
 
 ## Roles y permisos
 
@@ -107,12 +119,13 @@ La migración agrega `users.status`, `users.last_login_at`, `users.last_login_ip
 | Exportar a Excel | No | Sí |
 | Cambiar su propia contraseña | Sí | Sí |
 | Editar bienes | No | Sí |
-| Trasladar bienes entre áreas (con historial) | No | Sí |
+| Cambiar bienes de área (con historial) | No | Sí |
+| Gestionar el catálogo de áreas | No | Sí |
 | Eliminar bienes | No | Sí |
 | Gestionar usuarios, roles y estados | No | Sí |
 | Ver reportes y bitácora de auditoría | No | Sí |
 
-Las reglas se validan tanto en la interfaz como en el servidor (`api/api.php` y `api/users.php`). Un usuario normal no puede forzar una edición, eliminación o traslado llamando directamente a la API.
+Las reglas se validan tanto en la interfaz como en el servidor (`api/api.php`, `api/areas.php` y `api/users.php`). Un usuario normal no puede forzar una edición, eliminación, cambio de área o gestión de áreas llamando directamente a la API.
 
 ### Gestión de usuarios
 
@@ -126,13 +139,15 @@ El administrador puede, desde **Usuarios**:
 
 El sistema impide desactivar la propia cuenta y desactivar o degradar al último administrador activo. Al desactivar una cuenta, su sesión deja de tener acceso en la siguiente petición.
 
-### Traslados y auditoría
+### Áreas, cambios de área y auditoría
 
-- El botón **Trasladar** (solo admin) registra el ambiente de origen, el destino, el motivo, la fecha y el responsable. El ambiente actual del bien se actualiza automáticamente.
-- Si el administrador cambia la ubicación desde la edición del bien, también se registra un movimiento automático.
-- La bitácora guarda inicios de sesión, intentos fallidos, cierres de sesión, altas, ediciones, eliminaciones, traslados y cambios de usuarios o contraseñas.
+- El administrador administra el catálogo desde **Áreas**: crear, renombrar, activar, desactivar y eliminar solo las áreas sin bienes.
+- Al registrar o editar un bien, el área se elige de una lista obligatoria. Así se evitan errores de escritura y los bienes quedan correctamente ubicados.
+- El botón **Cambiar área** (solo admin) registra el área de origen, el destino, el motivo, la fecha y el responsable. El historial se conserva dentro del mismo formulario.
+- Si el administrador cambia el área desde la edición del bien, también se registra un cambio automático.
+- La bitácora guarda inicios de sesión, intentos fallidos, cierres de sesión, altas, ediciones, eliminaciones, cambios de área, cambios del catálogo de áreas y cambios de usuarios o contraseñas.
 - **Auditoría** permite filtrar por acción, usuario, correo o detalle, con paginación de 50 registros.
-- **Reportes** muestra totales, valor referencial, agrupaciones por categoría, ambiente y estado, además de los últimos traslados.
+- **Reportes** muestra totales, agrupaciones por categoría, área y estado, además de los últimos cambios de área.
 
 ## API
 
@@ -141,11 +156,21 @@ El sistema impide desactivar la propia cuenta y desactivar o degradar al último
 | Acción | Método | Roles | Descripción |
 | --- | --- | --- | --- |
 | `list` | GET | todos | Lista completa del inventario. |
-| `movements` | GET (`asset_id`) | todos | Historial de traslados de un bien. |
-| `create` | POST | todos | Registra un bien. |
-| `update` | POST | admin | Edita un bien. |
-| `transfer` | POST | admin | Traslada un bien y guarda historial. |
+| `movements` | GET (`asset_id`) | todos | Historial de cambios de área de un bien. |
+| `create` | POST | todos | Registra un bien con `area_id`. |
+| `update` | POST | admin | Edita un bien y su área. |
+| `transfer` | POST | admin | Cambia el bien de área y guarda historial. |
 | `delete` | POST | admin | Elimina un bien. |
+
+`api/areas.php`:
+
+| Acción | Método | Roles | Descripción |
+| --- | --- | --- | --- |
+| `list` | GET | todos | Lista las áreas activas (el admin ve todas). |
+| `create` | POST | admin | Crea un área. |
+| `update` | POST | admin | Edita el nombre o estado de un área. |
+| `toggle` | POST | admin | Activa o desactiva un área. |
+| `delete` | POST | admin | Elimina un área sin bienes asignados. |
 
 `api/users.php`:
 
@@ -160,7 +185,9 @@ El sistema impide desactivar la propia cuenta y desactivar o degradar al último
 
 ## Exportar a Excel
 
-El botón **Exportar Excel** (solo administrador) genera el archivo con PhpSpreadsheet. Instala la dependencia una vez:
+El botón **Exportar Excel** (solo administrador) abre una vista previa antes de descargar. Puedes elegir entre los bienes visibles con los filtros actuales o todo el inventario, revisar la tabla y confirmar la descarga.
+
+El archivo se genera con PhpSpreadsheet. Instala la dependencia una vez:
 
 ```bash
 composer install
@@ -174,13 +201,13 @@ Si no ejecutas Composer, el botón descarga un archivo `.csv` compatible con Exc
 php tests/prueba.php
 ```
 
-Verifica la carga de credenciales (`.env`) y la validación de datos de los bienes. Sale con código `0` si todo pasa.
+Verifica la carga de credenciales (`.env`), la validación de datos de los bienes y la validación del catálogo de áreas. Sale con código `0` si todo pasa.
 
 ## Registrar con código de barras
 
 En **Registrar bien**, escribe el código o pulsa **Escanear** y permite el acceso a la cámara. El botón **Escanear** de la página busca un bien existente por su código de barras o código patrimonial; si no existe, abre el formulario para registrarlo. El lector reconoce formatos comunes como Code 128, Code 39, EAN-13 y UPC.
 
-La cámara del navegador solo funciona en un contexto seguro: HTTPS al publicar, o `localhost` durante pruebas. También se puede escribir el código manualmente o usar un lector USB que funcione como teclado.
+La cámara del navegador solo funciona en un contexto seguro: HTTPS al publicar o al acceder desde otro dispositivo (por ejemplo, un teléfono), o `localhost` durante pruebas en el mismo equipo. Para HTTPS local, el navegador del teléfono también debe confiar en el certificado. También se puede escribir el código manualmente o usar un lector USB que funcione como teclado.
 
 ## Seguridad y respaldo
 
@@ -188,7 +215,7 @@ La cámara del navegador solo funciona en un contexto seguro: HTTPS al publicar,
 - Las cuentas inactivas no pueden iniciar sesión y pierden el acceso en la siguiente petición.
 - El estado y el rol se refrescan desde la base de datos en cada petición, no solo al iniciar sesión.
 - Las escrituras requieren un token CSRF de la sesión.
-- La eliminación, edición y traslado están restringidos al rol `admin` en el servidor.
+- La eliminación, edición y cambio de área están restringidos al rol `admin` en el servidor. El catálogo de áreas también es exclusivo del administrador.
 - El código interno (`config/`, `includes/`, `scripts/`, `database/`, `vendor/`, `.env`) queda bloqueado por `.htaccess` y por el router de desarrollo.
 - Las cookies de sesión son `HttpOnly`, `SameSite=Lax` y `Secure` cuando se usa HTTPS.
 - Exporta copias en Excel con frecuencia y programa respaldos de la base de datos según las políticas municipales.

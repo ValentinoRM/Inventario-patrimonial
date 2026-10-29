@@ -70,8 +70,17 @@ function audit_details_summary(?string $json): string
     if (isset($details['email'])) {
         $parts[] = (string) $details['email'];
     }
+    if (isset($details['area'])) {
+        $parts[] = 'Área: ' . (string) $details['area'];
+    }
     if (isset($details['from_location'], $details['to_location'])) {
         $parts[] = $details['from_location'] . ' → ' . $details['to_location'];
+    }
+    if (isset($details['from']['area'], $details['to']['area'])) {
+        $parts[] = $details['from']['area'] . ' → ' . $details['to']['area'];
+    }
+    if (isset($details['from']['name'], $details['to']['name'])) {
+        $parts[] = $details['from']['name'] . ' → ' . $details['to']['name'];
     }
     if (isset($details['role'])) {
         $parts[] = 'Rol: ' . role_label((string) $details['role']);
@@ -95,7 +104,7 @@ require __DIR__ . '/views/partials/sidebar.php';
 require __DIR__ . '/views/partials/topbar.php';
 ?>
       <header class="page-head">
-        <div><div class="eyebrow">Administración</div><h1>Bitácora de auditoría</h1><p>Seguimiento de accesos, altas, ediciones, traslados y cambios de usuarios.</p></div>
+        <div><div class="eyebrow">Administración</div><h1>Bitácora de auditoría</h1><p>Seguimiento de accesos, altas, ediciones, cambios de área y cambios de usuarios.</p></div>
       </header>
 
       <section class="table-panel">

@@ -25,6 +25,7 @@ $initials = mb_strtoupper(mb_substr($barName, 0, 2, 'UTF-8'), 'UTF-8');
               <a href="index.php" class="<?= $activeNav === 'inventario' ? 'active' : '' ?>">Inventario</a>
               <?php if ($barAdmin): ?>
               <a href="usuarios.php" class="<?= $activeNav === 'usuarios' ? 'active' : '' ?>">Usuarios</a>
+              <a href="areas.php" class="<?= $activeNav === 'areas' ? 'active' : '' ?>">Áreas</a>
               <a href="reportes.php" class="<?= $activeNav === 'reportes' ? 'active' : '' ?>">Reportes</a>
               <a href="auditoria.php" class="<?= $activeNav === 'auditoria' ? 'active' : '' ?>">Auditoría</a>
               <?php endif; ?>

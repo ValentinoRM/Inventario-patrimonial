@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/assets.php';
+require_once __DIR__ . '/../includes/areas.php';
 require_once __DIR__ . '/../includes/audit.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -26,6 +27,20 @@ function user_id(): int
     return (int) ($user['id'] ?? 0);
 }
 
+function active_area(PDO $pdo, int $areaId): array
+{
+    $area = get_area($pdo, $areaId);
+
+    if (!$area) {
+        fail('El área seleccionada no existe.', 422);
+    }
+    if ($area['status'] !== 'activo') {
+        fail('El área seleccionada está inactiva.', 422);
+    }
+
+    return $area;
+}
+
 if (!is_logged_in()) {
     fail('Tu sesión expiró. Vuelve a iniciar sesión.', 401);
 }
@@ -33,6 +48,9 @@ if (!is_logged_in()) {
 if (!refresh_session_user()) {
     logout_user();
     fail('Tu cuenta fue desactivada o ya no existe. Vuelve a iniciar sesión.', 401);
+}
+if (must_change_password()) {
+    fail('Debes cambiar tu contraseña antes de continuar.', 403);
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -88,12 +106,13 @@ try {
                 fail(implode(' ', $errors), 422);
             }
 
+            $area = active_area($pdo, (int) $data['area_id']);
             $data['asset_code'] = next_asset_code($pdo);
             $uid = user_id();
 
             $statement = $pdo->prepare(
-                'INSERT INTO assets (asset_code, barcode, name, category, quantity, location, custodian, `condition`, acquired_on, notes, created_by, updated_by)
-                 VALUES (:asset_code, :barcode, :name, :category, :quantity, :location, :custodian, :condition, :acquired_on, :notes, :created_by, :updated_by)'
+                'INSERT INTO assets (asset_code, barcode, name, category, quantity, location, area_id, custodian, `condition`, acquired_on, notes, created_by, updated_by)
+                 VALUES (:asset_code, :barcode, :name, :category, :quantity, :location, :area_id, :custodian, :condition, :acquired_on, :notes, :created_by, :updated_by)'
             );
 
             try {
@@ -103,7 +122,8 @@ try {
                     ':name'        => $data['name'],
                     ':category'    => $data['category'],
                     ':quantity'    => $data['quantity'],
-                    ':location'    => $data['location'],
+                    ':location'    => $area['name'],
+                    ':area_id'     => $area['id'],
                     ':custodian'   => $data['custodian'],
                     ':condition'   => $data['condition'],
                     ':acquired_on' => $data['acquired_on'],
@@ -119,7 +139,7 @@ try {
             }
 
             $id = (int) $pdo->lastInsertId();
-            audit_log('asset_create', 'asset', $id, ['asset_code' => $data['asset_code'], 'name' => $data['name'], 'location' => $data['location']], $uid);
+            audit_log('asset_create', 'asset', $id, ['asset_code' => $data['asset_code'], 'name' => $data['name'], 'area' => $area['name']], $uid);
 
             $created = get_asset($pdo, $id);
             unset($created['raw']);
@@ -146,9 +166,18 @@ try {
                 fail(implode(' ', $errors), 422);
             }
 
+            $area = get_area($pdo, (int) $data['area_id']);
+            if (!$area) {
+                fail('El área seleccionada no existe.', 422);
+            }
+            if ($area['status'] !== 'activo' && (int) ($current['area_id'] ?? 0) !== (int) $area['id']) {
+                fail('El área seleccionada está inactiva.', 422);
+            }
+
             $statement = $pdo->prepare(
                 'UPDATE assets
-                 SET barcode = :barcode, name = :name, category = :category, quantity = :quantity, location = :location,
+                 SET barcode = :barcode, name = :name, category = :category, quantity = :quantity,
+                     location = :location, area_id = :area_id,
                      custodian = :custodian, `condition` = :condition, acquired_on = :acquired_on, notes = :notes,
                      updated_by = :updated_by
                  WHERE id = :id'
@@ -160,7 +189,8 @@ try {
                     ':name'        => $data['name'],
                     ':category'    => $data['category'],
                     ':quantity'    => $data['quantity'],
-                    ':location'    => $data['location'],
+                    ':location'    => $area['name'],
+                    ':area_id'     => $area['id'],
                     ':custodian'   => $data['custodian'],
                     ':condition'   => $data['condition'],
                     ':acquired_on' => $data['acquired_on'],
@@ -175,7 +205,7 @@ try {
                 throw $e;
             }
 
-            if (mb_strtolower(trim($current['location'])) !== mb_strtolower(trim($data['location']))) {
+            if ((int) ($current['area_id'] ?? 0) !== (int) $area['id']) {
                 $move = $pdo->prepare(
                     'INSERT INTO asset_movements (asset_id, from_location, to_location, reason, moved_by)
                      VALUES (:asset_id, :from_location, :to_location, :reason, :moved_by)'
@@ -183,8 +213,8 @@ try {
                 $move->execute([
                     ':asset_id'      => $id,
                     ':from_location' => $current['location'],
-                    ':to_location'   => $data['location'],
-                    ':reason'        => 'Cambio registrado al editar el bien',
+                    ':to_location'   => $area['name'],
+                    ':reason'        => 'Cambio de área registrado al editar el bien',
                     ':moved_by'      => user_id(),
                 ]);
             }
@@ -192,8 +222,8 @@ try {
             audit_log('asset_update', 'asset', $id, [
                 'asset_code' => $current['asset_code'],
                 'name'       => $current['name'],
-                'from'       => ['location' => $current['location'], 'custodian' => $current['custodian']],
-                'to'         => ['location' => $data['location'], 'custodian' => $data['custodian']],
+                'from'       => ['area' => $current['location'], 'custodian' => $current['custodian']],
+                'to'         => ['area' => $area['name'], 'custodian' => $data['custodian']],
             ], user_id());
 
             $created = get_asset($pdo, $id);
@@ -203,18 +233,18 @@ try {
 
         case 'transfer':
             if (!$admin) {
-                fail('Solo el administrador puede trasladar bienes.', 403);
+                fail('Solo el administrador puede cambiar el área de los bienes.', 403);
             }
 
             $id = (int) ($rawBody['id'] ?? 0);
-            $toLocation = trim((string) ($rawBody['to_location'] ?? ''));
+            $areaId = (int) ($rawBody['area_id'] ?? 0);
             $reason = trim((string) ($rawBody['reason'] ?? ''));
 
             if ($id <= 0) {
-                fail('No se indicó el bien a trasladar.', 422);
+                fail('No se indicó el bien a cambiar de área.', 422);
             }
-            if ($toLocation === '' || mb_strlen($toLocation) > 70) {
-                fail('El ambiente/área destino es obligatorio (máximo 70 caracteres).', 422);
+            if ($areaId <= 0) {
+                fail('El área destino es obligatoria.', 422);
             }
             if (mb_strlen($reason) > 200) {
                 fail('El motivo no debe superar 200 caracteres.', 422);
@@ -224,15 +254,18 @@ try {
             if (!$current) {
                 fail('El bien ya no existe.', 404);
             }
-            if (mb_strtolower(trim($current['location'])) === mb_strtolower($toLocation)) {
-                fail('El ambiente destino debe ser diferente al actual.', 422);
+
+            $area = active_area($pdo, $areaId);
+            if ((int) ($current['area_id'] ?? 0) === (int) $area['id']) {
+                fail('El área destino debe ser diferente al actual.', 422);
             }
 
             $pdo->beginTransaction();
             try {
-                $update = $pdo->prepare('UPDATE assets SET location = :location, updated_by = :updated_by WHERE id = :id');
+                $update = $pdo->prepare('UPDATE assets SET location = :location, area_id = :area_id, updated_by = :updated_by WHERE id = :id');
                 $update->execute([
-                    ':location'   => $toLocation,
+                    ':location'   => $area['name'],
+                    ':area_id'    => $area['id'],
                     ':updated_by' => user_id(),
                     ':id'         => $id,
                 ]);
@@ -244,7 +277,7 @@ try {
                 $move->execute([
                     ':asset_id'      => $id,
                     ':from_location' => $current['location'],
-                    ':to_location'   => $toLocation,
+                    ':to_location'   => $area['name'],
                     ':reason'        => $reason,
                     ':moved_by'      => user_id(),
                 ]);
@@ -259,7 +292,7 @@ try {
                 'asset_code'    => $current['asset_code'],
                 'name'          => $current['name'],
                 'from_location' => $current['location'],
-                'to_location'   => $toLocation,
+                'to_location'   => $area['name'],
                 'reason'        => $reason,
             ], user_id());
 
@@ -299,4 +332,3 @@ try {
 } catch (Throwable $e) {
     fail('Error del servidor: ' . $e->getMessage(), 500);
 }
-

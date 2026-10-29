@@ -24,17 +24,17 @@ require __DIR__ . '/views/partials/sidebar.php';
 require __DIR__ . '/views/partials/topbar.php';
 ?>
       <header class="page-head">
-        <div><div class="eyebrow">Administración</div><h1>Reportes del inventario</h1><p>Resumen por categoría, ambiente, estado y traslados recientes.</p></div>
+        <div><div class="eyebrow">Administración</div><h1>Reportes del inventario</h1><p>Resumen por categoría, área, estado y cambios de área recientes.</p></div>
         <div class="head-actions">
           <button class="button button-light" id="printBtn" type="button"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 9V4h10v5M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><rect x="7" y="14" width="10" height="6"/></svg> Imprimir</button>
-          <a class="button button-light" href="export.php"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m-5-5 5 5 5-5M5 17v3h14v-3"/></svg> Exportar Excel</a>
+          <button class="button button-light" id="exportBtn" type="button"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m-5-5 5 5 5-5M5 17v3h14v-3"/></svg> Exportar Excel</button>
         </div>
       </header>
 
       <section class="metrics" aria-label="Resumen general">
         <article class="metric"><div class="metric-top"><span>Registros</span><span class="metric-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h4"/></svg></span></div><div class="metric-value"><?= number_format($summary['records'], 0, '.', ',') ?></div><div class="metric-detail">Bienes en el sistema</div></article>
         <article class="metric"><div class="metric-top"><span>Unidades</span><span class="metric-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16v12H4zM8 7V4h8v3"/></svg></span></div><div class="metric-value"><?= number_format($summary['units'], 0, '.', ',') ?></div><div class="metric-detail">Total de existencias</div></article>
-        <article class="metric"><div class="metric-top"><span>Ambientes</span><span class="metric-icon red"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 21V8l9-5 9 5v13M8 21v-7h8v7M7 9h.01M12 9h.01M17 9h.01"/></svg></span></div><div class="metric-value"><?= number_format($summary['locations'], 0, '.', ',') ?></div><div class="metric-detail">Ubicaciones distintas</div></article>
+        <article class="metric"><div class="metric-top"><span>Áreas</span><span class="metric-icon red"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 21V8l9-5 9 5v13M8 21v-7h8v7M7 9h.01M12 9h.01M17 9h.01"/></svg></span></div><div class="metric-value"><?= number_format($summary['locations'], 0, '.', ',') ?></div><div class="metric-detail">Áreas con bienes</div></article>
       </section>
 
       <div class="report-grid">
@@ -70,10 +70,10 @@ require __DIR__ . '/views/partials/topbar.php';
       </div>
 
       <section class="table-panel" style="margin-top: 16px;">
-        <div class="section-head" style="padding: 15px 16px 0;"><h2>Por ambiente / área</h2><span><?= count($byLocation) ?> ambientes</span></div>
+        <div class="section-head" style="padding: 15px 16px 0;"><h2>Por área</h2><span><?= count($byLocation) ?> áreas</span></div>
         <div class="table-scroll">
           <table>
-            <thead><tr><th>Ambiente</th><th>Registros</th><th>Unidades</th></tr></thead>
+            <thead><tr><th>Área</th><th>Registros</th><th>Unidades</th></tr></thead>
             <tbody>
               <?php foreach ($byLocation as $row): ?>
               <tr><td><?= e($row['label']) ?></td><td><?= number_format((int) $row['records'], 0, '.', ',') ?></td><td><?= number_format((int) $row['units'], 0, '.', ',') ?></td></tr>
@@ -85,7 +85,7 @@ require __DIR__ . '/views/partials/topbar.php';
       </section>
 
       <section class="table-panel" style="margin-top: 16px;" id="movimientos">
-        <div class="section-head" style="padding: 15px 16px 0;"><h2>Últimos traslados</h2><span><?= count($movements) ?> movimientos</span></div>
+        <div class="section-head" style="padding: 15px 16px 0;"><h2>Últimos cambios de área</h2><span><?= count($movements) ?> cambios</span></div>
         <div class="table-scroll">
           <table>
             <thead><tr><th>Fecha</th><th>Bien</th><th>Desde</th><th>Hacia</th><th>Motivo</th><th>Responsable</th></tr></thead>
@@ -100,15 +100,64 @@ require __DIR__ . '/views/partials/topbar.php';
                 <td><?= e($move['moved_by_name'] ?: ($move['moved_by_email'] ?: '—')) ?></td>
               </tr>
               <?php endforeach; ?>
-              <?php if ($movements === []): ?><tr><td colspan="6">Todavía no se registraron traslados.</td></tr><?php endif; ?>
+              <?php if ($movements === []): ?><tr><td colspan="6">Todavía no se registraron cambios de área.</td></tr><?php endif; ?>
             </tbody>
           </table>
         </div>
       </section>
 <?php require __DIR__ . '/views/partials/foot.php'; ?>
 
+  <?php require __DIR__ . '/views/partials/export-modal.php'; ?>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
   <script>
-    document.getElementById('printBtn').addEventListener('click', () => window.print());
+    window.REPORT_EXPORT_CONFIG = {
+      csrfToken: <?= json_encode(csrf_token(), JSON_UNESCAPED_UNICODE) ?>
+    };
+  </script>
+  <script src="./assets/js/export-preview.js"></script>
+  <script>
+    let reportAssets = null;
+    let reportToastTimer;
+
+    function showReportToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(reportToastTimer);
+      reportToastTimer = setTimeout(() => toast.classList.remove("show"), 2800);
+    }
+
+    async function loadReportAssets() {
+      if (reportAssets !== null) return reportAssets;
+      const response = await fetch("api/api.php?action=list", { headers: { "Accept": "application/json" } });
+      const data = await response.json();
+      if (!response.ok || data.ok === false) {
+        throw new Error(data.error || "No se pudo cargar el inventario.");
+      }
+      reportAssets = data.assets ?? [];
+      return reportAssets;
+    }
+
+    window.ExportPreview.init({
+      csrfToken: window.REPORT_EXPORT_CONFIG.csrfToken,
+      getAll: () => reportAssets ?? [],
+      notify: showReportToast
+    });
+
+    document.getElementById("printBtn").addEventListener("click", () => window.print());
+    document.getElementById("exportBtn").addEventListener("click", async () => {
+      try {
+        const items = await loadReportAssets();
+        if (!items.length) {
+          showReportToast("No hay bienes para exportar.");
+          return;
+        }
+        window.ExportPreview.open();
+      } catch (error) {
+        showReportToast(error.message);
+      }
+    });
   </script>
 </body>
 </html>

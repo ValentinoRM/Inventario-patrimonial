@@ -25,7 +25,7 @@ require __DIR__ . '/partials/topbar.php';
         <article class="metric"><div class="metric-top"><span>Bienes registrados</span><span class="metric-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h4"/></svg></span></div><div class="metric-value" id="metricItems">0</div><div class="metric-detail">Unidades en inventario</div></article>
         <article class="metric"><div class="metric-top"><span>En buen estado</span><span class="metric-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 12 4 4L19 6"/></svg></span></div><div class="metric-value" id="metricGood">0</div><div class="metric-detail">Bienes operativos</div></article>
         <article class="metric"><div class="metric-top"><span>Requieren atención</span><span class="metric-icon amber"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 2.8 20h18.4L12 3Z"/><path d="M12 9v5m0 3h.01"/></svg></span></div><div class="metric-value" id="metricAttention">0</div><div class="metric-detail">Regulares o en mal estado</div></article>
-        <article class="metric"><div class="metric-top"><span>Ambientes ocupados</span><span class="metric-icon red"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 21V8l9-5 9 5v13M8 21v-7h8v7M7 9h.01M12 9h.01M17 9h.01"/></svg></span></div><div class="metric-value" id="metricLocations">0</div><div class="metric-detail">Ubicaciones registradas</div></article>
+        <article class="metric"><div class="metric-top"><span>Áreas ocupadas</span><span class="metric-icon red"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 21V8l9-5 9 5v13M8 21v-7h8v7M7 9h.01M12 9h.01M17 9h.01"/></svg></span></div><div class="metric-value" id="metricLocations">0</div><div class="metric-detail">Áreas con bienes registrados</div></article>
       </section>
 
       <section class="photo-strip" aria-label="Identificación del inventario municipal">
@@ -38,7 +38,7 @@ require __DIR__ . '/partials/topbar.php';
         <div class="section-head"><h2 id="tableTitle">Registro de bienes</h2><span id="resultCount">0 registros</span></div>
         <div class="table-panel">
           <div class="toolbar">
-            <label class="searchbox"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m16 16 4 4"/></svg><input id="searchInput" type="search" placeholder="Buscar por nombre, código o ambiente..." aria-label="Buscar bienes"></label>
+            <label class="searchbox"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m16 16 4 4"/></svg><input id="searchInput" type="search" placeholder="Buscar por nombre, código o área..." aria-label="Buscar bienes"></label>
             <div class="filters">
               <select id="categoryFilter" aria-label="Filtrar por categoría"><option value="">Todas las categorías</option></select>
               <select id="conditionFilter" aria-label="Filtrar por estado"><option value="">Todos los estados</option><option>Bueno</option><option>Regular</option><option>Malo</option></select>
@@ -46,7 +46,7 @@ require __DIR__ . '/partials/topbar.php';
           </div>
           <div class="table-scroll">
             <table>
-              <thead><tr><th>Bien / Código</th><th>Barcode</th><th>Categoría</th><th>Cantidad</th><th>Ambiente</th><th>Responsable</th><?php if ($isAdmin): ?><th>Registrado por</th><?php endif; ?><th>Estado</th><?php if ($isAdmin): ?><th aria-label="Acciones"></th><?php endif; ?></tr></thead>
+              <thead><tr><th>Bien / Código</th><th>Barcode</th><th>Categoría</th><th>Cantidad</th><th>Área</th><th>Responsable</th><?php if ($isAdmin): ?><th>Registrado por</th><?php endif; ?><th>Estado</th><?php if ($isAdmin): ?><th aria-label="Acciones"></th><?php endif; ?></tr></thead>
               <tbody id="assetRows"></tbody>
             </table>
             <div class="empty-state" id="emptyState" hidden><strong>No hay bienes para mostrar</strong>Prueba otra búsqueda o registra un nuevo bien.</div>
@@ -67,7 +67,7 @@ require __DIR__ . '/partials/topbar.php';
           <div class="field full"><label for="barcode">Código de barras</label><div class="scan-field"><input id="barcode" name="barcode" maxlength="120" placeholder="Escanea o escribe el código del bien"><button class="button button-light" id="scanFormBtn" type="button" aria-label="Escanear código de barras"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7V4h3m10 0h3v3M4 17v3h3m10 0h3v-3M5 12h14M8 9v6m3-6v6m3-6v6m3-6v6"/></svg> Escanear</button></div></div>
           <div class="field"><label for="quantity">Cantidad *</label><input id="quantity" name="quantity" type="number" min="1" max="99999" value="1" required></div>
           <div class="field"><label for="condition">Estado de conservación *</label><select id="condition" name="condition" required><option>Bueno</option><option>Regular</option><option>Malo</option></select></div>
-          <div class="field"><label for="location">Ambiente / ubicación *</label><input id="location" name="location" required maxlength="70" placeholder="Ej. Secretaría general"></div>
+          <div class="field"><label for="area">Área *</label><select id="area" name="area_id" required><option value="">Seleccionar área</option></select><span class="field-hint" id="areaHint">Selecciona el área donde se ubica el bien.</span></div>
           <div class="field"><label for="custodian">Responsable</label><input id="custodian" name="custodian" maxlength="70" placeholder="Nombre del responsable"></div>
           <div class="field"><label for="acquired">Fecha de adquisición</label><input id="acquired" name="acquired" type="date"></div>
           <div class="field full"><label for="notes">Observaciones</label><textarea id="notes" name="notes" maxlength="300" placeholder="Detalles adicionales del bien"></textarea></div>
@@ -80,15 +80,19 @@ require __DIR__ . '/partials/topbar.php';
   <?php if ($isAdmin): ?>
   <div class="modal-backdrop" id="transferBackdrop" role="presentation">
     <section class="modal" role="dialog" aria-modal="true" aria-labelledby="transferTitle">
-      <div class="modal-head"><div><h2 id="transferTitle">Trasladar bien</h2><p id="transferSubtitle">Registra el cambio de área o ambiente.</p></div><button class="modal-close" id="closeTransfer" type="button" aria-label="Cerrar">&times;</button></div>
+      <div class="modal-head"><div><h2 id="transferTitle">Cambiar área del bien</h2><p id="transferSubtitle">Registra el cambio de área y conserva el historial.</p></div><button class="modal-close" id="closeTransfer" type="button" aria-label="Cerrar">&times;</button></div>
       <form id="transferForm">
         <input type="hidden" id="transferId" name="id">
         <div class="form-grid">
-          <div class="field full"><label>Ambiente actual</label><input id="transferFrom" type="text" readonly></div>
-          <div class="field full"><label for="transferTo">Nuevo ambiente / área *</label><input id="transferTo" name="to_location" maxlength="70" required placeholder="Ej. Almacén central"></div>
-          <div class="field full"><label for="transferReason">Motivo del traslado</label><input id="transferReason" name="reason" maxlength="200" placeholder="Ej. Reasignación de oficina"></div>
+          <div class="field full"><label>Área actual</label><input id="transferFrom" type="text" readonly></div>
+          <div class="field full"><label for="transferArea">Nueva área *</label><select id="transferArea" name="area_id" required><option value="">Seleccionar área</option></select></div>
+          <div class="field full"><label for="transferReason">Motivo del cambio</label><input id="transferReason" name="reason" maxlength="200" placeholder="Ej. Reasignación de oficina"></div>
+          <div class="field full">
+            <label>Historial de cambios de área</label>
+            <div class="area-history" id="transferHistory"><span class="muted-note">Sin cambios registrados.</span></div>
+          </div>
         </div>
-        <div class="modal-actions"><button class="button button-light" id="cancelTransfer" type="button">Cancelar</button><button class="button button-primary" type="submit">Registrar traslado</button></div>
+        <div class="modal-actions"><button class="button button-light" id="cancelTransfer" type="button">Cancelar</button><button class="button button-primary" type="submit" id="transferSaveBtn">Cambiar área</button></div>
       </form>
     </section>
   </div>
@@ -101,6 +105,7 @@ require __DIR__ . '/partials/topbar.php';
       <p class="scanner-hint" id="scannerHint">Centra el código de barras frente a la cámara. Si el navegador lo solicita, permite el acceso a la cámara.</p>
     </section>
   </div>
+  <?php require __DIR__ . '/partials/export-modal.php'; ?>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script>
@@ -113,6 +118,7 @@ require __DIR__ . '/partials/topbar.php';
     };
   </script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="./assets/js/app.js"></script>
+  <script src="./assets/js/export-preview.js"></script>
+  <script src="./assets/js/app.js?v=20261029-camera"></script>
 </body>
 </html>

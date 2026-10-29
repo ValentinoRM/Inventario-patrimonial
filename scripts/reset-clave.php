@@ -44,7 +44,7 @@ if (strlen($clave) < 8) {
 try {
     $pdo = db();
 
-    $statement = $pdo->prepare('UPDATE users SET password_hash = :hash WHERE email = :email');
+    $statement = $pdo->prepare('UPDATE users SET password_hash = :hash, must_change_password = 1 WHERE email = :email');
     $statement->execute([
         ':hash'  => password_hash($clave, PASSWORD_DEFAULT),
         ':email' => $email,

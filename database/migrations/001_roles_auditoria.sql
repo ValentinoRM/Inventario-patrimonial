@@ -1,6 +1,6 @@
 -- ============================================================
 -- Migración 001: estados de usuario, último acceso,
--- historial de traslados y auditoría.
+-- historial de cambios de área y auditoría.
 --
 -- Aplicar UNA sola vez sobre una base existente:
 --   mysql -u usuario -p inventario_patrimonial < database/migrations/001_roles_auditoria.sql
@@ -10,6 +10,7 @@
 -- ============================================================
 
 USE inventario_patrimonial;
+SET NAMES utf8mb4;
 
 -- users.status
 SET @sql = (

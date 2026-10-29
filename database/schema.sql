@@ -4,6 +4,8 @@
 -- Ejecutar en phpMyAdmin o con: mysql -u root -p < database/schema.sql
 -- ============================================================
 
+SET NAMES utf8mb4;
+
 CREATE DATABASE IF NOT EXISTS inventario_patrimonial
     CHARACTER SET utf8mb4
     COLLATE utf8mb4_unicode_ci;
@@ -20,6 +22,7 @@ CREATE TABLE IF NOT EXISTS users (
     name          VARCHAR(120) NOT NULL DEFAULT '',
     role          ENUM('admin', 'user') NOT NULL DEFAULT 'user',
     status        ENUM('activo', 'inactivo') NOT NULL DEFAULT 'activo',
+    must_change_password TINYINT(1) NOT NULL DEFAULT 1,
     last_login_at DATETIME DEFAULT NULL,
     last_login_ip VARCHAR(45) DEFAULT NULL,
     created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -44,6 +47,20 @@ VALUES (1, 0)
 ON DUPLICATE KEY UPDATE last_number = last_number;
 
 -- ------------------------------------------------------------
+-- Catálogo de áreas patrimoniales
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS areas (
+    id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    name       VARCHAR(70) NOT NULL,
+    status     ENUM('activo', 'inactivo') NOT NULL DEFAULT 'activo',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY areas_name_unique (name),
+    KEY areas_status_idx (status)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
 -- Bienes patrimoniales
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS assets (
@@ -54,6 +71,7 @@ CREATE TABLE IF NOT EXISTS assets (
     category    VARCHAR(60) NOT NULL,
     quantity    INT UNSIGNED NOT NULL DEFAULT 1,
     location    VARCHAR(70) NOT NULL,
+    area_id     INT UNSIGNED DEFAULT NULL,
     custodian   VARCHAR(70) NOT NULL DEFAULT '',
     `condition` ENUM('Bueno', 'Regular', 'Malo') NOT NULL,
     acquired_on DATE DEFAULT NULL,
@@ -68,12 +86,14 @@ CREATE TABLE IF NOT EXISTS assets (
     UNIQUE KEY assets_barcode_unique (barcode),
     KEY assets_category_idx (category),
     KEY assets_location_idx (location),
+    KEY assets_area_idx (area_id),
+    CONSTRAINT assets_area_fk FOREIGN KEY (area_id) REFERENCES areas (id) ON DELETE RESTRICT,
     CONSTRAINT assets_created_by_fk FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE SET NULL,
     CONSTRAINT assets_updated_by_fk FOREIGN KEY (updated_by) REFERENCES users (id) ON DELETE SET NULL
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
--- Historial de traslados de bienes entre ambientes / áreas
+-- Historial de cambios de área de los bienes
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS asset_movements (
     id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

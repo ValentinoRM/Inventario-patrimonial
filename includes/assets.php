@@ -12,10 +12,12 @@ function fetch_assets(?PDO $pdo = null): array
 {
     $pdo = $pdo ?? db();
     $rows = $pdo->query(
-        'SELECT a.id, a.asset_code, a.barcode, a.name, a.category, a.quantity, a.location, a.custodian, a.`condition`, a.acquired_on, a.notes, a.created_at, a.updated_at, a.created_by, a.updated_by,
+        'SELECT a.id, a.asset_code, a.barcode, a.name, a.category, a.quantity, a.location, a.area_id, a.custodian, a.`condition`, a.acquired_on, a.notes, a.created_at, a.updated_at, a.created_by, a.updated_by,
+                ar.name AS area_name,
                 creator.name AS created_by_name, creator.email AS created_by_email,
                 updater.name AS updated_by_name, updater.email AS updated_by_email
          FROM assets a
+         LEFT JOIN areas ar ON ar.id = a.area_id
          LEFT JOIN users creator ON creator.id = a.created_by
          LEFT JOIN users updater ON updater.id = a.updated_by
          ORDER BY a.created_at DESC, a.id DESC'
@@ -30,10 +32,12 @@ function fetch_assets(?PDO $pdo = null): array
 function get_asset(PDO $pdo, int $id): ?array
 {
     $statement = $pdo->prepare(
-        'SELECT a.id, a.asset_code, a.barcode, a.name, a.category, a.quantity, a.location, a.custodian, a.`condition`, a.acquired_on, a.notes, a.created_at, a.updated_at, a.created_by, a.updated_by,
+        'SELECT a.id, a.asset_code, a.barcode, a.name, a.category, a.quantity, a.location, a.area_id, a.custodian, a.`condition`, a.acquired_on, a.notes, a.created_at, a.updated_at, a.created_by, a.updated_by,
+                ar.name AS area_name,
                 creator.name AS created_by_name, creator.email AS created_by_email,
                 updater.name AS updated_by_name, updater.email AS updated_by_email
          FROM assets a
+         LEFT JOIN areas ar ON ar.id = a.area_id
          LEFT JOIN users creator ON creator.id = a.created_by
          LEFT JOIN users updater ON updater.id = a.updated_by
          WHERE a.id = :id'
@@ -53,7 +57,7 @@ function get_asset(PDO $pdo, int $id): ?array
 }
 
 /**
- * Historial de traslados de un bien.
+ * Historial de cambios de área de un bien.
  */
 function fetch_asset_movements(PDO $pdo, int $assetId): array
 {
@@ -81,7 +85,8 @@ function map_asset(array $row): array
         'name'       => (string) $row['name'],
         'category'   => (string) $row['category'],
         'quantity'   => (int) $row['quantity'],
-        'location'   => (string) $row['location'],
+        'area_id'    => isset($row['area_id']) && $row['area_id'] !== null ? (int) $row['area_id'] : null,
+        'location'   => (string) (($row['area_name'] ?? '') !== '' ? $row['area_name'] : ($row['location'] ?? '')),
         'custodian'  => (string) ($row['custodian'] ?? ''),
         'condition'  => (string) $row['condition'],
         'acquired'   => (string) ($row['acquired_on'] ?? ''),
@@ -99,7 +104,7 @@ function fetch_inventory_summary(PDO $pdo): array
 {
     $row = $pdo->query(
         'SELECT COUNT(*) AS records, COALESCE(SUM(quantity), 0) AS units,
-                COUNT(DISTINCT location) AS locations
+                COUNT(DISTINCT area_id) AS locations
          FROM assets'
     )->fetch();
 
@@ -120,6 +125,16 @@ function fetch_inventory_breakdown(PDO $pdo, string $column): array
         throw new InvalidArgumentException('Agrupación no permitida.');
     }
 
+    if ($column === 'location') {
+        return $pdo->query(
+            "SELECT COALESCE(ar.name, a.location) AS label, COUNT(*) AS records, COALESCE(SUM(a.quantity), 0) AS units
+             FROM assets a
+             LEFT JOIN areas ar ON ar.id = a.area_id
+             GROUP BY label
+             ORDER BY units DESC, label ASC"
+        )->fetchAll();
+    }
+
     return $pdo->query(
         "SELECT `$column` AS label, COUNT(*) AS records, COALESCE(SUM(quantity), 0) AS units
          FROM assets
@@ -129,7 +144,7 @@ function fetch_inventory_breakdown(PDO $pdo, string $column): array
 }
 
 /**
- * Últimos traslados registrados en el sistema.
+ * Últimos cambios de área registrados en el sistema.
  */
 function fetch_recent_movements(PDO $pdo, int $limit = 20): array
 {
@@ -191,9 +206,11 @@ function validate_asset_input(array $input): array
         $errors[] = 'La cantidad debe ser un número entre 1 y 99999.';
     }
 
-    $location = trim((string) ($input['location'] ?? ''));
-    if ($location === '' || mb_strlen($location) > 70) {
-        $errors[] = 'El ambiente es obligatorio (máximo 70 caracteres).';
+    $areaId = filter_var($input['area_id'] ?? null, FILTER_VALIDATE_INT, [
+        'options' => ['min_range' => 1],
+    ]);
+    if ($areaId === false) {
+        $errors[] = 'El área es obligatoria.';
     }
 
     $custodian = trim((string) ($input['custodian'] ?? ''));
@@ -225,7 +242,7 @@ function validate_asset_input(array $input): array
         'name'        => $name,
         'category'    => $category,
         'quantity'    => $quantity === false ? 0 : (int) $quantity,
-        'location'    => $location,
+        'area_id'     => $areaId === false ? 0 : (int) $areaId,
         'custodian'   => $custodian,
         'condition'   => $condition,
         'barcode'     => $barcode !== '' ? $barcode : null,

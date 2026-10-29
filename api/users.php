@@ -40,7 +40,11 @@ if (str_contains($contentType, 'application/json')) {
 
 $action = (string) ($_GET['action'] ?? $rawBody['action'] ?? '');
 
-if (!is_admin()) {
+if (must_change_password() && $action !== 'change_password') {
+    fail('Debes cambiar tu contraseña antes de continuar.', 403);
+}
+
+if (!is_admin() && $action !== 'change_password') {
     fail('Solo el administrador puede gestionar usuarios.', 403);
 }
 
@@ -101,7 +105,7 @@ try {
             }
 
             $statement = $pdo->prepare(
-                "INSERT INTO users (email, password_hash, name, role, status) VALUES (:email, :hash, :name, :role, 'activo')"
+                "INSERT INTO users (email, password_hash, name, role, status, must_change_password) VALUES (:email, :hash, :name, :role, 'activo', 1)"
             );
             $statement->execute([
                 ':email' => $email,
@@ -218,7 +222,7 @@ try {
                 fail('Usuario no encontrado.', 404);
             }
 
-            $statement = $pdo->prepare('UPDATE users SET password_hash = :hash WHERE id = :id');
+            $statement = $pdo->prepare('UPDATE users SET password_hash = :hash, must_change_password = 1 WHERE id = :id');
             $statement->execute([
                 ':hash' => password_hash($password, PASSWORD_DEFAULT),
                 ':id'   => $id,
@@ -245,12 +249,16 @@ try {
             if (!$hash || !password_verify($currentPass, (string) $hash)) {
                 fail('La contraseña actual no es correcta.', 422);
             }
+            if (password_verify($newPass, (string) $hash)) {
+                fail('La nueva contraseña debe ser diferente a la actual.', 422);
+            }
 
-            $update = $pdo->prepare('UPDATE users SET password_hash = :hash WHERE id = :id');
+            $update = $pdo->prepare('UPDATE users SET password_hash = :hash, must_change_password = 0 WHERE id = :id');
             $update->execute([
                 ':hash' => password_hash($newPass, PASSWORD_DEFAULT),
                 ':id'   => $meId,
             ]);
+            $_SESSION['must_change_password'] = false;
 
             audit_log('password_change', 'user', $meId, [], $meId);
             respond(['ok' => true]);

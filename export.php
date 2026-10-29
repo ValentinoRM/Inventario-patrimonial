@@ -15,7 +15,52 @@ if (!is_admin()) {
 
 $assets = fetch_assets();
 
-$columns = ['Código patrimonial', 'Código de barras', 'Nombre', 'Categoría', 'Cantidad', 'Ambiente', 'Responsable', 'Estado', 'Fecha de adquisición', 'Observaciones'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!csrf_valid($_POST['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null))) {
+        http_response_code(419);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo 'La sesión expiró. Recarga la página e inténtalo de nuevo.';
+        exit;
+    }
+
+    $idsRaw = trim((string) ($_POST['ids'] ?? ''));
+    if ($idsRaw !== '') {
+        $ids = array_values(array_unique(array_filter(
+            array_map(static fn (string $value): int => (int) trim($value), explode(',', $idsRaw)),
+            static fn (int $id): bool => $id > 0
+        )));
+
+        if ($ids === []) {
+            http_response_code(422);
+            header('Content-Type: text/plain; charset=utf-8');
+            echo 'No se recibieron bienes válidos para exportar.';
+            exit;
+        }
+
+        $byId = [];
+        foreach ($assets as $asset) {
+            $byId[(int) $asset['id']] = $asset;
+        }
+
+        $selected = [];
+        foreach ($ids as $id) {
+            if (isset($byId[$id])) {
+                $selected[] = $byId[$id];
+            }
+        }
+
+        if ($selected === []) {
+            http_response_code(422);
+            header('Content-Type: text/plain; charset=utf-8');
+            echo 'Los bienes seleccionados ya no existen.';
+            exit;
+        }
+
+        $assets = $selected;
+    }
+}
+
+$columns = ['Código patrimonial', 'Código de barras', 'Nombre', 'Categoría', 'Cantidad', 'Área', 'Responsable', 'Estado', 'Fecha de adquisición', 'Observaciones'];
 $keys    = ['asset_code', 'barcode', 'name', 'category', 'quantity', 'location', 'custodian', 'condition', 'acquired', 'notes'];
 $filename = 'inventario-patrimonial-huamancaca-chico';
 

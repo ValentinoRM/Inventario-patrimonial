@@ -50,7 +50,7 @@ function refresh_session_user(): bool
         return false;
     }
 
-    $statement = db()->prepare('SELECT id, email, name, role, status FROM users WHERE id = :id LIMIT 1');
+    $statement = db()->prepare('SELECT id, email, name, role, status, must_change_password FROM users WHERE id = :id LIMIT 1');
     $statement->execute([':id' => (int) $_SESSION['user_id']]);
     $row = $statement->fetch();
 
@@ -61,6 +61,7 @@ function refresh_session_user(): bool
     $_SESSION['email'] = (string) $row['email'];
     $_SESSION['name']  = (string) $row['name'];
     $_SESSION['role']  = (string) $row['role'];
+    $_SESSION['must_change_password'] = (bool) $row['must_change_password'];
 
     return true;
 }
@@ -77,6 +78,14 @@ function require_login(): void
         header('Location: login.php?inactive=1');
         exit;
     }
+
+    if (must_change_password()) {
+        $path = parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+        if (basename(is_string($path) ? $path : '') !== 'cambiar-clave.php') {
+            header('Location: cambiar-clave.php');
+            exit;
+        }
+    }
 }
 
 function login_user(array $user): void
@@ -86,6 +95,12 @@ function login_user(array $user): void
     $_SESSION['email']   = (string) $user['email'];
     $_SESSION['name']    = (string) $user['name'];
     $_SESSION['role']    = (string) $user['role'];
+    $_SESSION['must_change_password'] = (bool) ($user['must_change_password'] ?? false);
+}
+
+function must_change_password(): bool
+{
+    return !empty($_SESSION['must_change_password']);
 }
 
 function logout_user(): void
@@ -116,4 +131,3 @@ function csrf_valid(?string $token): bool
         && !empty($_SESSION['csrf_token'])
         && hash_equals($_SESSION['csrf_token'], $token);
 }
-

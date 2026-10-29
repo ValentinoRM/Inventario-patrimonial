@@ -62,7 +62,7 @@ try {
     }
 
     $statement = $pdo->prepare(
-        'INSERT INTO users (email, password_hash, name, role) VALUES (:email, :hash, :name, :role)'
+        'INSERT INTO users (email, password_hash, name, role, must_change_password) VALUES (:email, :hash, :name, :role, 1)'
     );
     $statement->execute([
         ':email' => $email,
