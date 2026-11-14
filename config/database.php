@@ -3,16 +3,17 @@ declare(strict_types=1);
 
 /*
  * Conexión a la base de datos MySQL/MariaDB local.
- * Prioridad: variables de entorno reales > archivo .env > valores por defecto.
+ * FORZA conexión por socket UNIX para evitar problemas de autenticación TCP.
  * Copia .env.example a .env y coloca ahí tus credenciales.
  */
 require_once __DIR__ . '/env.php';
 
-define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
-define('DB_PORT', getenv('DB_PORT') ?: '3306');
-define('DB_NAME', getenv('DB_NAME') ?: 'inventario_patrimonial');
-define('DB_USER', getenv('DB_USER') ?: 'root');
-define('DB_PASS', getenv('DB_PASS') !== false ? getenv('DB_PASS') : '');
+/* FORZAR conexión por socket UNIX */
+define('DB_HOST', 'localhost');  // 'localhost' activará modo socket
+define('DB_PORT', '3306');
+define('DB_NAME', 'inventario_patrimonial');
+define('DB_USER', 'root');  // usuario root
+define('DB_PASS', '');      // sin contraseña
 const DB_CHARSET = 'utf8mb4';
 
 function db(): PDO
@@ -23,9 +24,9 @@ function db(): PDO
         return $pdo;
     }
 
+    // Modo socket UNIX cuando DB_HOST es 'localhost'
     $dsn = sprintf(
-        'mysql:host=%s;port=%s;dbname=%s;charset=%s',
-        DB_HOST,
+        'mysql:unix_socket=/opt/lampp/var/mysql/mysql.sock;port=%s;dbname=%s;charset=%s',
         DB_PORT,
         DB_NAME,
         DB_CHARSET

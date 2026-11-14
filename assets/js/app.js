@@ -416,13 +416,22 @@ async function startScanner(target) {
     formatsToSupport: [formats.CODE_128, formats.CODE_39, formats.EAN_13, formats.EAN_8, formats.UPC_A, formats.UPC_E, formats.ITF, formats.QR_CODE]
   });
   try {
-    await barcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 280, height: 140 } }, async decodedText => {
-      if (scanHandled) return;
-      scanHandled = true;
-      const code = decodedText.trim();
-      await stopScanner();
-      onScannedBarcode(code, scanTarget);
-    }, () => {});
+    await barcodeScanner.start(
+      async decodedText => {
+        if (scanHandled) return;
+        scanHandled = true;
+        const code = decodedText.trim();
+        await stopScanner();
+        onScannedBarcode(code, scanTarget);
+      },
+      () => {
+      },
+      {
+        facingMode: "environment",
+        fps: 10,
+        qrbox: { width: 280, height: 140 }
+      }
+    ),
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error || "el navegador no dio más detalles");
     scannerHint.textContent = `No se pudo abrir la cámara (${reason}). Usa HTTPS y permite el acceso a la cámara.`;
