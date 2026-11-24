@@ -430,8 +430,8 @@ async function startScanner(target) {
         facingMode: "environment",
         fps: 10,
         qrbox: { width: 280, height: 140 }
-      }
-    ),
+      },
+    );
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error || "el navegador no dio más detalles");
     scannerHint.textContent = `No se pudo abrir la cámara (${reason}). Usa HTTPS y permite el acceso a la cámara.`;
