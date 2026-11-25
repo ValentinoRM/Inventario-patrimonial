@@ -417,6 +417,11 @@ async function startScanner(target) {
   });
   try {
     await barcodeScanner.start(
+      { facingMode: "environment" },
+      {
+        fps: 10,
+        qrbox: { width: 280, height: 140 }
+      },
       async decodedText => {
         if (scanHandled) return;
         scanHandled = true;
@@ -424,13 +429,7 @@ async function startScanner(target) {
         await stopScanner();
         onScannedBarcode(code, scanTarget);
       },
-      () => {
-      },
-      {
-        facingMode: "environment",
-        fps: 10,
-        qrbox: { width: 280, height: 140 }
-      },
+      () => {}
     );
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error || "el navegador no dio más detalles");

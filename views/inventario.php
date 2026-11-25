@@ -119,6 +119,6 @@ require __DIR__ . '/partials/topbar.php';
   </script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="./assets/js/export-preview.js"></script>
-  <script src="./assets/js/app.js?v=20261029-camera"></script>
+  <script src="./assets/js/app.js?v=20261124"></script>
 </body>
 </html>

@@ -2,3 +2,8 @@
 /composer.lock
 .DS_Store
 .env
+/.env.backup
+/.my.cnf.*
+/.my.output.*
+/.mysql.*
+/config/database.php.bak
