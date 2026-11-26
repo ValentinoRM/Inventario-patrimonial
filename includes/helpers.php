@@ -61,6 +61,8 @@ function audit_action_label(string $action): string
         'asset_update'      => 'Bien actualizado',
         'asset_delete'      => 'Bien eliminado',
         'asset_transfer'    => 'Área del bien cambiada',
+        'asset_loan'        => 'Bien prestado',
+        'asset_loan_return' => 'Bien devuelto',
         'area_create'       => 'Área creada',
         'area_update'       => 'Área actualizada',
         'area_status'       => 'Estado de área cambiado',

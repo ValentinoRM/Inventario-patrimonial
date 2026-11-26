@@ -45,12 +45,15 @@ inventario-patrimonial/          # Raíz web (DocumentRoot apunta aquí)
 │   ├── areas.php               # Acceso a datos y validación de áreas
 │   ├── audit.php               # Registro en la bitácora
 │   ├── helpers.php             # Utilidades de formato y etiquetas
+│   ├── loans.php               # Validación e historial de préstamos
 │   └── permissions.php         # Control de acceso a secciones administrativas
 ├── database/
 │   ├── schema.sql              # Estructura completa (instalaciones nuevas)
 │   └── migrations/
 │       ├── 001_roles_auditoria.sql  # Migración para bases existentes
-│       └── 002_areas.sql            # Catálogo de áreas y relación con bienes
+│       ├── 002_areas.sql            # Catálogo de áreas y relación con bienes
+│       ├── 003_cambio_clave_obligatorio.sql
+│       └── 004_prestamos.sql        # Historial de préstamos y devoluciones
 ├── scripts/                    # Utilidades de terminal
 │   ├── iniciar.sh              # Arranque/parada del servidor de desarrollo
 │   ├── router-dev.php          # Router que protege carpetas internas en php -S
@@ -101,9 +104,10 @@ Si la base de datos ya tenía una versión anterior, aplica las migraciones una 
 mysql -u root -p inventario_patrimonial < database/migrations/001_roles_auditoria.sql
 mysql -u root -p inventario_patrimonial < database/migrations/002_areas.sql
 mysql -u root -p inventario_patrimonial < database/migrations/003_cambio_clave_obligatorio.sql
+mysql -u root -p inventario_patrimonial < database/migrations/004_prestamos.sql
 ```
 
-La migración 001 agrega estados de usuario, último acceso, traslados y auditoría. La migración 002 crea el catálogo `areas`, agrega `assets.area_id` y convierte las ubicaciones actuales en áreas asignadas a cada bien. La migración 003 añade la marca de cambio obligatorio de contraseña. Las tres son idempotentes: si los cambios ya existen, no fallan.
+La migración 001 agrega estados de usuario, último acceso, traslados y auditoría. La migración 002 crea el catálogo `areas`, agrega `assets.area_id` y convierte las ubicaciones actuales en áreas asignadas a cada bien. La migración 003 añade la marca de cambio obligatorio de contraseña. La migración 004 crea el historial de préstamos y devoluciones. Las cuatro son idempotentes: si los cambios ya existen, no fallan.
 
 Al actualizar una instalación existente, las cuentas actuales deberán cambiar su contraseña una vez. Al crear una cuenta o restablecer su contraseña, la persona también deberá cambiarla al iniciar sesión, incluidos los administradores. Después del cambio, podrá seguir usando su nueva contraseña sin volver a recibir esa solicitud, hasta que se le asigne otra contraseña.
 
@@ -120,6 +124,7 @@ Después de aplicar la migración 002, revisa en **Áreas** que los nombres conv
 | Cambiar su propia contraseña | Sí | Sí |
 | Editar bienes | No | Sí |
 | Cambiar bienes de área (con historial) | No | Sí |
+| Registrar préstamos y devoluciones | No | Sí |
 | Gestionar el catálogo de áreas | No | Sí |
 | Eliminar bienes | No | Sí |
 | Gestionar usuarios, roles y estados | No | Sí |
@@ -144,8 +149,10 @@ El sistema impide desactivar la propia cuenta y desactivar o degradar al último
 - El administrador administra el catálogo desde **Áreas**: crear, renombrar, activar, desactivar y eliminar solo las áreas sin bienes.
 - Al registrar o editar un bien, el área se elige de una lista obligatoria. Así se evitan errores de escritura y los bienes quedan correctamente ubicados.
 - El botón **Cambiar área** (solo admin) registra el área de origen, el destino, el motivo, la fecha y el responsable. El historial se conserva dentro del mismo formulario.
+- El botón **Préstamos** (solo admin) registra quién recibe el bien y la fecha prevista de devolución. El préstamo permanece activo hasta registrar su devolución; se conserva quién registró la entrega y la devolución.
+- El escáner del formulario completa el código de barras al leerlo. El escáner de búsqueda localiza bienes existentes, muestra su área y señala si están prestados.
 - Si el administrador cambia el área desde la edición del bien, también se registra un cambio automático.
-- La bitácora guarda inicios de sesión, intentos fallidos, cierres de sesión, altas, ediciones, eliminaciones, cambios de área, cambios del catálogo de áreas y cambios de usuarios o contraseñas.
+- La bitácora guarda inicios de sesión, intentos fallidos, cierres de sesión, altas, ediciones, eliminaciones, cambios de área, préstamos y devoluciones, cambios del catálogo de áreas y cambios de usuarios o contraseñas.
 - **Auditoría** permite filtrar por acción, usuario, correo o detalle, con paginación de 50 registros.
 - **Reportes** muestra totales, agrupaciones por categoría, área y estado, además de los últimos cambios de área.
 
@@ -157,9 +164,12 @@ El sistema impide desactivar la propia cuenta y desactivar o degradar al último
 | --- | --- | --- | --- |
 | `list` | GET | todos | Lista completa del inventario. |
 | `movements` | GET (`asset_id`) | todos | Historial de cambios de área de un bien. |
+| `loan_history` | GET (`asset_id`) | todos | Historial de préstamos y devoluciones de un bien. |
 | `create` | POST | todos | Registra un bien con `area_id`. |
 | `update` | POST | admin | Edita un bien y su área. |
 | `transfer` | POST | admin | Cambia el bien de área y guarda historial. |
+| `loan_create` | POST | admin | Registra un préstamo activo, con destinatario y fecha prevista opcional. |
+| `loan_return` | POST | admin | Registra la devolución de un préstamo activo. |
 | `delete` | POST | admin | Elimina un bien. |
 
 `api/areas.php`:
@@ -201,13 +211,13 @@ Si no ejecutas Composer, el botón descarga un archivo `.csv` compatible con Exc
 php tests/prueba.php
 ```
 
-Verifica la carga de credenciales (`.env`), la validación de datos de los bienes y la validación del catálogo de áreas. Sale con código `0` si todo pasa.
+Verifica la carga de credenciales (`.env`) y la validación de bienes, áreas y préstamos. Sale con código `0` si todo pasa.
 
 ## Registrar con código de barras
 
 En **Registrar bien**, escribe el código o pulsa **Escanear** y permite el acceso a la cámara. El botón **Escanear** de la página busca un bien existente por su código de barras o código patrimonial; si no existe, abre el formulario para registrarlo. El lector reconoce formatos comunes como Code 128, Code 39, EAN-13 y UPC.
 
-La cámara del navegador solo funciona en un contexto seguro: HTTPS al publicar o al acceder desde otro dispositivo (por ejemplo, un teléfono), o `localhost` durante pruebas en el mismo equipo. Para HTTPS local, el navegador del teléfono también debe confiar en el certificado. También se puede escribir el código manualmente o usar un lector USB que funcione como teclado.
+La cámara del navegador funciona en un contexto seguro: `localhost` durante las pruebas en esta computadora o HTTPS con un certificado válido al publicar en el hosting. El servidor local de desarrollo escucha solo en `127.0.0.1`; para usar la cámara desde un teléfono, publica la aplicación en el hosting con HTTPS. También se puede escribir el código manualmente o usar un lector USB que funcione como teclado.
 
 ## Seguridad y respaldo
 

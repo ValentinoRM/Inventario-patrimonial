@@ -46,7 +46,7 @@ require __DIR__ . '/partials/topbar.php';
           </div>
           <div class="table-scroll">
             <table>
-              <thead><tr><th>Bien / Código</th><th>Barcode</th><th>Categoría</th><th>Cantidad</th><th>Área</th><th>Responsable</th><?php if ($isAdmin): ?><th>Registrado por</th><?php endif; ?><th>Estado</th><?php if ($isAdmin): ?><th aria-label="Acciones"></th><?php endif; ?></tr></thead>
+              <thead><tr><th>Bien / Código</th><th>Barcode</th><th>Categoría</th><th>Cantidad</th><th>Área</th><th>Préstamo</th><th>Responsable</th><?php if ($isAdmin): ?><th>Registrado por</th><?php endif; ?><th>Estado</th><?php if ($isAdmin): ?><th aria-label="Acciones"></th><?php endif; ?></tr></thead>
               <tbody id="assetRows"></tbody>
             </table>
             <div class="empty-state" id="emptyState" hidden><strong>No hay bienes para mostrar</strong>Prueba otra búsqueda o registra un nuevo bien.</div>
@@ -96,6 +96,26 @@ require __DIR__ . '/partials/topbar.php';
       </form>
     </section>
   </div>
+
+  <div class="modal-backdrop" id="loanBackdrop" role="presentation">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="loanTitle">
+      <div class="modal-head"><div><h2 id="loanTitle">Préstamo del bien</h2><p id="loanSubtitle">Registra la entrega y controla su devolución.</p></div><button class="modal-close" id="closeLoan" type="button" aria-label="Cerrar préstamos">&times;</button></div>
+      <form id="loanForm">
+        <input type="hidden" id="loanAssetId" name="asset_id">
+        <div class="form-grid">
+          <div class="field full"><label for="loanAssetSummary">Bien y área actual</label><input id="loanAssetSummary" type="text" readonly></div>
+          <div class="field"><label for="loanBorrower">Persona que recibe *</label><input id="loanBorrower" name="borrower" maxlength="120" required placeholder="Nombre de quien recibe el bien"></div>
+          <div class="field"><label for="loanDueOn">Fecha prevista de devolución</label><input id="loanDueOn" name="due_on" type="date"></div>
+          <div class="field full"><label for="loanNotes">Observaciones</label><textarea id="loanNotes" name="notes" maxlength="300" placeholder="Motivo u otras indicaciones"></textarea></div>
+          <div class="field full"><span class="field-hint" id="loanStatusNote"></span></div>
+        </div>
+        <div class="modal-actions"><button class="button button-light" id="cancelLoan" type="button">Cerrar</button><button class="button button-primary" type="submit" id="loanSaveBtn">Registrar préstamo</button></div>
+      </form>
+      <div class="loan-history-section">
+        <div class="field"><label>Historial de préstamos y devoluciones</label><div class="area-history" id="loanHistory"><span class="muted-note">Selecciona un bien para ver su historial.</span></div></div>
+      </div>
+    </section>
+  </div>
   <?php endif; ?>
 
   <div class="scanner-backdrop" id="scannerBackdrop" role="presentation">
@@ -114,11 +134,12 @@ require __DIR__ . '/partials/topbar.php';
       isAdmin: <?= $isAdmin ? 'true' : 'false' ?>,
       canEdit: <?= $isAdmin ? 'true' : 'false' ?>,
       canDelete: <?= $isAdmin ? 'true' : 'false' ?>,
-      canTransfer: <?= $isAdmin ? 'true' : 'false' ?>
+      canTransfer: <?= $isAdmin ? 'true' : 'false' ?>,
+      canManageLoans: <?= $isAdmin ? 'true' : 'false' ?>
     };
   </script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="./assets/js/export-preview.js"></script>
-  <script src="./assets/js/app.js?v=20261124"></script>
+  <script src="./assets/js/app.js?v=20261125-loans"></script>
 </body>
 </html>

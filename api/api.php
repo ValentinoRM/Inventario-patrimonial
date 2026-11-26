@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/assets.php';
 require_once __DIR__ . '/../includes/areas.php';
+require_once __DIR__ . '/../includes/loans.php';
 require_once __DIR__ . '/../includes/audit.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -86,10 +87,26 @@ try {
             respond(['ok' => true, 'movements' => fetch_asset_movements($pdo, $id)]);
             break;
 
+        case 'loan_history':
+            if ($method !== 'GET') {
+                fail('Método no permitido.', 405);
+            }
+            $id = (int) ($_GET['asset_id'] ?? 0);
+            if ($id <= 0) {
+                fail('Bien inválido.', 422);
+            }
+            if (!get_asset($pdo, $id)) {
+                fail('El bien ya no existe.', 404);
+            }
+            respond(['ok' => true, 'loans' => fetch_asset_loans($pdo, $id)]);
+            break;
+
         case 'create':
         case 'update':
         case 'delete':
         case 'transfer':
+        case 'loan_create':
+        case 'loan_return':
             if ($method !== 'POST') {
                 fail('Método no permitido.', 405);
             }
@@ -299,6 +316,118 @@ try {
             $created = get_asset($pdo, $id);
             unset($created['raw']);
             respond(['ok' => true, 'asset' => $created]);
+            break;
+
+        case 'loan_create':
+            if (!$admin) {
+                fail('Solo el administrador puede registrar préstamos.', 403);
+            }
+
+            $id = filter_var($rawBody['asset_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if ($id === false) {
+                fail('No se indicó un bien válido para el préstamo.', 422);
+            }
+            [$loanData, $errors] = validate_asset_loan_input($rawBody);
+            if ($errors) {
+                fail(implode(' ', $errors), 422);
+            }
+
+            $pdo->beginTransaction();
+            try {
+                $assetStatement = $pdo->prepare('SELECT id, asset_code, name FROM assets WHERE id = :id FOR UPDATE');
+                $assetStatement->execute([':id' => $id]);
+                $asset = $assetStatement->fetch();
+                if (!$asset) {
+                    $pdo->rollBack();
+                    fail('El bien ya no existe.', 404);
+                }
+
+                $activeLoan = $pdo->prepare('SELECT id FROM asset_loans WHERE asset_id = :asset_id AND returned_at IS NULL LIMIT 1');
+                $activeLoan->execute([':asset_id' => $id]);
+                if ($activeLoan->fetchColumn() !== false) {
+                    $pdo->rollBack();
+                    fail('Este bien ya tiene un préstamo activo. Registra su devolución antes de prestarlo nuevamente.', 409);
+                }
+
+                $statement = $pdo->prepare(
+                    'INSERT INTO asset_loans (asset_id, borrower, due_on, notes, loaned_by)
+                     VALUES (:asset_id, :borrower, :due_on, :notes, :loaned_by)'
+                );
+                $statement->execute([
+                    ':asset_id' => $id,
+                    ':borrower' => $loanData['borrower'],
+                    ':due_on' => $loanData['due_on'],
+                    ':notes' => $loanData['notes'],
+                    ':loaned_by' => user_id(),
+                ]);
+                $loanId = (int) $pdo->lastInsertId();
+                $pdo->commit();
+            } catch (Throwable $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                throw $e;
+            }
+
+            audit_log('asset_loan', 'loan', $loanId, [
+                'asset_id' => (int) $asset['id'],
+                'asset_code' => (string) $asset['asset_code'],
+                'asset_name' => (string) $asset['name'],
+                'borrower' => $loanData['borrower'],
+                'due_on' => $loanData['due_on'],
+            ], user_id());
+            respond(['ok' => true, 'loan_id' => $loanId]);
+            break;
+
+        case 'loan_return':
+            if (!$admin) {
+                fail('Solo el administrador puede registrar devoluciones.', 403);
+            }
+
+            $loanId = filter_var($rawBody['loan_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if ($loanId === false) {
+                fail('No se indicó un préstamo válido.', 422);
+            }
+
+            $pdo->beginTransaction();
+            try {
+                $statement = $pdo->prepare(
+                    'SELECT l.id, l.asset_id, l.borrower, l.returned_at, a.asset_code, a.name AS asset_name
+                     FROM asset_loans l
+                     INNER JOIN assets a ON a.id = l.asset_id
+                     WHERE l.id = :id
+                     FOR UPDATE'
+                );
+                $statement->execute([':id' => $loanId]);
+                $loan = $statement->fetch();
+                if (!$loan) {
+                    $pdo->rollBack();
+                    fail('El préstamo ya no existe.', 404);
+                }
+                if ($loan['returned_at'] !== null) {
+                    $pdo->rollBack();
+                    fail('Este préstamo ya fue devuelto.', 409);
+                }
+
+                $update = $pdo->prepare(
+                    'UPDATE asset_loans SET returned_at = CURRENT_TIMESTAMP, returned_by = :returned_by WHERE id = :id'
+                );
+                $update->execute([':returned_by' => user_id(), ':id' => $loanId]);
+                $pdo->commit();
+            } catch (Throwable $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                throw $e;
+            }
+
+            audit_log('asset_loan_return', 'loan', $loanId, [
+                'asset_id' => (int) $loan['asset_id'],
+                'asset_code' => (string) $loan['asset_code'],
+                'asset_name' => (string) $loan['asset_name'],
+                'borrower' => (string) $loan['borrower'],
+            ], user_id());
+            respond(['ok' => true]);
             break;
 
         case 'delete':

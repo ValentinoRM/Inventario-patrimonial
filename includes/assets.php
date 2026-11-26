@@ -13,11 +13,13 @@ function fetch_assets(?PDO $pdo = null): array
     $pdo = $pdo ?? db();
     $rows = $pdo->query(
         'SELECT a.id, a.asset_code, a.barcode, a.name, a.category, a.quantity, a.location, a.area_id, a.custodian, a.`condition`, a.acquired_on, a.notes, a.created_at, a.updated_at, a.created_by, a.updated_by,
+                active_loan.id AS active_loan_id, active_loan.borrower AS active_loan_borrower, active_loan.due_on AS active_loan_due_on,
                 ar.name AS area_name,
                 creator.name AS created_by_name, creator.email AS created_by_email,
                 updater.name AS updated_by_name, updater.email AS updated_by_email
          FROM assets a
          LEFT JOIN areas ar ON ar.id = a.area_id
+         LEFT JOIN asset_loans active_loan ON active_loan.asset_id = a.id AND active_loan.returned_at IS NULL
          LEFT JOIN users creator ON creator.id = a.created_by
          LEFT JOIN users updater ON updater.id = a.updated_by
          ORDER BY a.created_at DESC, a.id DESC'
@@ -33,11 +35,13 @@ function get_asset(PDO $pdo, int $id): ?array
 {
     $statement = $pdo->prepare(
         'SELECT a.id, a.asset_code, a.barcode, a.name, a.category, a.quantity, a.location, a.area_id, a.custodian, a.`condition`, a.acquired_on, a.notes, a.created_at, a.updated_at, a.created_by, a.updated_by,
+                active_loan.id AS active_loan_id, active_loan.borrower AS active_loan_borrower, active_loan.due_on AS active_loan_due_on,
                 ar.name AS area_name,
                 creator.name AS created_by_name, creator.email AS created_by_email,
                 updater.name AS updated_by_name, updater.email AS updated_by_email
          FROM assets a
          LEFT JOIN areas ar ON ar.id = a.area_id
+         LEFT JOIN asset_loans active_loan ON active_loan.asset_id = a.id AND active_loan.returned_at IS NULL
          LEFT JOIN users creator ON creator.id = a.created_by
          LEFT JOIN users updater ON updater.id = a.updated_by
          WHERE a.id = :id'
@@ -94,6 +98,11 @@ function map_asset(array $row): array
         'created_by'      => isset($row['created_by']) ? (int) $row['created_by'] : null,
         'created_by_name' => (string) ($row['created_by_name'] ?? ''),
         'updated_by_name' => (string) ($row['updated_by_name'] ?? ''),
+        'active_loan' => !empty($row['active_loan_id']) ? [
+            'id' => (int) $row['active_loan_id'],
+            'borrower' => (string) $row['active_loan_borrower'],
+            'due_on' => (string) ($row['active_loan_due_on'] ?? ''),
+        ] : null,
     ];
 }
 

@@ -3,6 +3,7 @@ const csrfToken = config.csrfToken ?? "";
 const canEditAssets = Boolean(config.canEdit);
 const canDeleteAssets = Boolean(config.canDelete);
 const canTransferAssets = Boolean(config.canTransfer);
+const canManageLoans = Boolean(config.canManageLoans);
 const isAdmin = Boolean(config.isAdmin);
 
 let assets = [];
@@ -23,6 +24,9 @@ const conditionFilter = document.getElementById("conditionFilter");
 const searchInput = document.getElementById("searchInput");
 const transferBackdrop = document.getElementById("transferBackdrop");
 const transferForm = document.getElementById("transferForm");
+const loanBackdrop = document.getElementById("loanBackdrop");
+const loanForm = document.getElementById("loanForm");
+const loanHistory = document.getElementById("loanHistory");
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
@@ -137,17 +141,19 @@ function getFilteredAssets() {
 
 function render() {
   const filtered = getFilteredAssets();
-  rows.innerHTML = filtered.map(asset => `<tr>
+  rows.innerHTML = filtered.map(asset => `<tr data-asset-id="${escapeHtml(asset.id)}">
     <td><div class="asset-name">${escapeHtml(asset.name)}</div><div class="asset-code">${escapeHtml(asset.asset_code || asset.id)}</div></td>
     <td>${asset.barcode ? `<span class="asset-barcode">${escapeHtml(asset.barcode)}</span>` : "<span class=\"asset-barcode\">Sin código</span>"}</td>
     <td><span class="category-pill">${escapeHtml(asset.category)}</span></td>
     <td>${Number(asset.quantity) || 0}</td>
     <td>${escapeHtml(asset.location)}</td>
+    <td>${asset.active_loan ? `<span class="loan-status-pill loan-active">Prestado</span><div class="loan-borrower">${escapeHtml(asset.active_loan.borrower)}</div>${asset.active_loan.due_on ? `<div class="loan-due">Devolver: ${escapeHtml(formatDate(asset.active_loan.due_on))}</div>` : ""}` : '<span class="loan-status-pill loan-available">Disponible</span>'}</td>
     <td>${escapeHtml(asset.custodian || "Sin asignar")}</td>
     ${isAdmin ? `<td>${escapeHtml(asset.created_by_name || "—")}</td>` : ""}
     <td><span class="status-pill status-${escapeHtml(asset.condition.toLocaleLowerCase("es"))}">${escapeHtml(asset.condition)}</span></td>
     ${isAdmin ? `<td><div class="row-actions">
       ${canEditAssets ? `<button class="icon-button" type="button" data-action="edit" data-id="${escapeHtml(asset.id)}" aria-label="Editar ${escapeHtml(asset.name)}" title="Editar"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m14 5 5 5M4 20l4.2-.8L19 8.4 15.6 5 4.8 15.8 4 20Z"/></svg></button>` : ""}
+      ${canManageLoans ? `<button class="icon-button" type="button" data-action="loan" data-id="${escapeHtml(asset.id)}" aria-label="Préstamos de ${escapeHtml(asset.name)}" title="Préstamos"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4Z"/><path d="M8 20V7a3 3 0 0 1 3-3M11 9h5m-5 4h5"/></svg></button>` : ""}
       ${canTransferAssets ? `<button class="icon-button" type="button" data-action="transfer" data-id="${escapeHtml(asset.id)}" aria-label="Cambiar área de ${escapeHtml(asset.name)}" title="Cambiar área"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 8h13m-4-4 4 4-4 4M20 16H7m4 4-4-4 4-4"/></svg></button>` : ""}
       ${canDeleteAssets ? `<button class="icon-button delete" type="button" data-action="delete" data-id="${escapeHtml(asset.id)}" aria-label="Eliminar ${escapeHtml(asset.name)}" title="Eliminar"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3"/></svg></button>` : ""}
     </div></td>` : ""}
@@ -208,6 +214,12 @@ function formatDateTime(value) {
   return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString("es-PE", { dateStyle: "short", timeStyle: "short" });
 }
 
+function formatDate(value) {
+  if (!value) return "—";
+  const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString("es-PE");
+}
+
 function renderAreaHistory(movements) {
   const container = document.getElementById("transferHistory");
   if (!container) return;
@@ -252,6 +264,124 @@ function closeTransferModal() {
   if (transferBackdrop) transferBackdrop.classList.remove("open");
 }
 
+function renderLoanHistory(loans) {
+  if (!loanHistory) return;
+  if (!loans.length) {
+    loanHistory.innerHTML = '<span class="muted-note">Este bien aún no tiene préstamos registrados.</span>';
+    return;
+  }
+
+  loanHistory.innerHTML = loans.map(loan => {
+    const returned = Boolean(loan.returned_at);
+    const details = [
+      `Entregado ${formatDateTime(loan.loaned_at)}`,
+      loan.due_on ? `Devolución prevista ${formatDate(loan.due_on)}` : "",
+      returned ? `Devuelto ${formatDateTime(loan.returned_at)}` : "Pendiente de devolución",
+      loan.loaned_by_name || loan.loaned_by_email || "Sistema",
+      returned ? `Recibió ${loan.returned_by_name || loan.returned_by_email || "Sistema"}` : "",
+      loan.notes || ""
+    ].filter(Boolean).map(escapeHtml).join(" · ");
+
+    return `<div class="loan-history-item">
+      <div class="loan-history-heading"><strong>${escapeHtml(loan.borrower)}</strong><span class="loan-status-pill ${returned ? "loan-available" : "loan-active"}">${returned ? "Devuelto" : "Prestado"}</span></div>
+      <span class="area-history-meta">${details}</span>
+      ${!returned && canManageLoans ? `<button class="button button-light loan-return-button" type="button" data-loan-return="${escapeHtml(loan.id)}">Marcar como devuelto</button>` : ""}
+    </div>`;
+  }).join("");
+}
+
+async function loadLoanHistory(assetId) {
+  if (!loanHistory) return;
+  loanHistory.innerHTML = '<span class="muted-note">Cargando historial...</span>';
+  try {
+    const data = await apiRequest("loan_history", null, { asset_id: assetId });
+    if (!data) return;
+    renderLoanHistory(data.loans ?? []);
+  } catch (error) {
+    loanHistory.innerHTML = '<span class="muted-note">No se pudo cargar el historial.</span>';
+    showToast(`No se pudo cargar el historial de préstamos: ${error.message}`);
+  }
+}
+
+function openLoanModal(asset) {
+  if (!canManageLoans || !loanBackdrop || !loanForm) return;
+  loanForm.reset();
+  document.getElementById("loanAssetId").value = asset.id;
+  document.getElementById("loanAssetSummary").value = `${asset.name} (${asset.asset_code}) · Área: ${asset.location || "Sin área"}`;
+
+  const activeLoan = asset.active_loan;
+  const borrowerInput = document.getElementById("loanBorrower");
+  const dueDateInput = document.getElementById("loanDueOn");
+  const notesInput = document.getElementById("loanNotes");
+  const saveButton = document.getElementById("loanSaveBtn");
+  borrowerInput.disabled = Boolean(activeLoan);
+  dueDateInput.disabled = Boolean(activeLoan);
+  notesInput.disabled = Boolean(activeLoan);
+  saveButton.disabled = Boolean(activeLoan);
+  document.getElementById("loanStatusNote").textContent = activeLoan
+    ? `Préstamo activo a ${activeLoan.borrower}. Registra la devolución en el historial antes de crear otro préstamo.`
+    : "El préstamo quedará pendiente hasta registrar su devolución.";
+
+  loanBackdrop.classList.add("open");
+  loadLoanHistory(asset.id);
+  if (!activeLoan) borrowerInput.focus();
+}
+
+function closeLoanModal() {
+  if (loanBackdrop) loanBackdrop.classList.remove("open");
+}
+
+if (loanForm) {
+  loanForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    const values = Object.fromEntries(new FormData(loanForm).entries());
+    const saveButton = document.getElementById("loanSaveBtn");
+    saveButton.disabled = true;
+    try {
+      const result = await apiRequest("loan_create", {
+        asset_id: Number(values.asset_id),
+        borrower: values.borrower.trim(),
+        due_on: values.due_on || "",
+        notes: values.notes.trim()
+      });
+      if (!result) return;
+      await loadAssets(false);
+      await loadLoanHistory(Number(values.asset_id));
+      showToast("Préstamo registrado.");
+    } catch (error) {
+      showToast(`No se pudo registrar el préstamo: ${error.message}`);
+    } finally {
+      const currentAsset = assets.find(asset => asset.id === Number(values.asset_id));
+      saveButton.disabled = Boolean(currentAsset?.active_loan);
+    }
+  });
+}
+
+if (loanHistory) {
+  loanHistory.addEventListener("click", async event => {
+    const button = event.target.closest("button[data-loan-return]");
+    if (!button) return;
+    button.disabled = true;
+    try {
+      const result = await apiRequest("loan_return", { loan_id: Number(button.dataset.loanReturn) });
+      if (!result) return;
+      const assetId = Number(document.getElementById("loanAssetId").value);
+      await loadAssets(false);
+      await loadLoanHistory(assetId);
+      showToast("Devolución registrada.");
+    } catch (error) {
+      showToast(`No se pudo registrar la devolución: ${error.message}`);
+      button.disabled = false;
+    }
+  });
+}
+
+const closeLoanBtn = document.getElementById("closeLoan");
+if (closeLoanBtn) closeLoanBtn.addEventListener("click", closeLoanModal);
+const cancelLoanBtn = document.getElementById("cancelLoan");
+if (cancelLoanBtn) cancelLoanBtn.addEventListener("click", closeLoanModal);
+if (loanBackdrop) loanBackdrop.addEventListener("click", event => { if (event.target === loanBackdrop) closeLoanModal(); });
+
 if (transferForm) {
   transferForm.addEventListener("submit", async event => {
     event.preventDefault();
@@ -288,6 +418,7 @@ document.getElementById("closeModal").addEventListener("click", closeModal);
 document.getElementById("cancelModal").addEventListener("click", closeModal);
 backdrop.addEventListener("click", event => { if (event.target === backdrop) closeModal(); });
 document.addEventListener("keydown", event => { if (event.key === "Escape" && backdrop.classList.contains("open")) closeModal(); if (event.key === "Escape") closeTransferModal(); });
+document.addEventListener("keydown", event => { if (event.key === "Escape") closeLoanModal(); });
 
 form.addEventListener("submit", async event => {
   event.preventDefault();
@@ -333,6 +464,7 @@ rows.addEventListener("click", async event => {
   const asset = assets.find(item => item.id === Number(button.dataset.id));
   if (!asset) return;
   if (button.dataset.action === "edit") { if (canEditAssets) openModal(asset); else showToast("Solo el administrador puede editar bienes."); }
+  if (button.dataset.action === "loan") { openLoanModal(asset); }
   if (button.dataset.action === "transfer") { openTransferModal(asset); }
   if (button.dataset.action === "delete" && confirm(`¿Eliminar "${asset.name}" (${asset.asset_code}) del inventario?`)) {
     try {
@@ -384,7 +516,7 @@ async function stopScanner() {
 
 function onScannedBarcode(code, target) {
   if (target === "form") {
-    form.elements.barcode.value = code;
+    fillBarcodeField(code);
     showToast(`Código leído: ${code}`);
     return;
   }
@@ -394,14 +526,22 @@ function onScannedBarcode(code, target) {
   conditionFilter.value = "";
   if (existing) {
     render();
-    showToast(`Bien encontrado: ${existing.name}`);
+    rows.querySelector(`[data-asset-id="${existing.id}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const status = existing.active_loan ? `Prestado a ${existing.active_loan.borrower}` : `Disponible en ${existing.location || "área sin asignar"}`;
+    showToast(`Bien encontrado: ${existing.name} · ${status}.`);
   } else {
     searchInput.value = "";
     render();
     openModal();
-    form.elements.barcode.value = code;
+    fillBarcodeField(code);
     showToast("Código nuevo. Completa los datos para registrarlo.");
   }
+}
+
+function fillBarcodeField(code) {
+  const barcodeField = document.getElementById("barcode");
+  barcodeField.value = code;
+  barcodeField.focus({ preventScroll: true });
 }
 
 async function startScanner(target) {
@@ -461,6 +601,7 @@ refreshTimer = setInterval(() => {
     && !backdrop.classList.contains("open")
     && !(transferBackdrop && transferBackdrop.classList.contains("open"))
     && !scannerBackdrop.classList.contains("open")
+    && !(loanBackdrop && loanBackdrop.classList.contains("open"))
     && !(exportBackdrop && exportBackdrop.classList.contains("open"))) {
     loadAreas(false);
     loadAssets(false);

@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/assets.php';
 require_once __DIR__ . '/../includes/areas.php';
+require_once __DIR__ . '/../includes/loans.php';
 
 $fallas = 0;
 
@@ -83,6 +84,17 @@ verificar('Área sin nombre genera error', $erroresArea !== []);
 
 [$_, $erroresArea] = validate_area_input(['name' => 'Almacén', 'status' => 'eliminada']);
 verificar('Estado de área inválido genera error', $erroresArea !== []);
+
+[$prestamo, $erroresPrestamo] = validate_asset_loan_input([
+    'borrower' => 'María Flores',
+    'due_on' => '2026-12-15',
+    'notes' => 'Préstamo para capacitación',
+]);
+verificar('Préstamo válido sin errores', $erroresPrestamo === []);
+verificar('Fecha de devolución conservada', $prestamo['due_on'] === '2026-12-15');
+
+[, $erroresPrestamo] = validate_asset_loan_input(['borrower' => '   ', 'due_on' => '2026-02-31']);
+verificar('Préstamo sin destinatario o con fecha imposible genera error', count($erroresPrestamo) === 2);
 
 echo $fallas === 0 ? "\nTodas las pruebas pasaron.\n" : "\n$fallas prueba(s) fallaron.\n";
 exit($fallas === 0 ? 0 : 1);
